@@ -1,106 +1,129 @@
-#include "powerMethodGpu.h"
+/*
+	Solves the heat eq in 2D using CUDA.
+*/
 
-namespace precisit{
-// square<T> computes the square of a number f(x) -> x*x
-template <typename T>
-struct square
-{
-    __host__ __device__
-    T operator()(const T& x) const {
-        return x * x;
-    }
-};
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
+
+#include <assert.h>
+#include <iostream>
+
+#define N 5
+#define PI 3.1415926f
+
+
+__device__ __host__
+float phi(float x, float y, float xc, float yc, int lvl){
+	/*
+		This is a wavelet function (or basis function in FEM-speak).
+		x & y are the variables.
+		xc & yc defines the point around which it is centered.
+		lvl defines the resolution. (Zero is the most course resolution)
+		
+		For now this is the mexican hat function.
+	*/
+	float sigma = 0.05f; //FIX!
+	float tmp = -(x*x+y*y)/(2.0f*sigma*sigma);
+	return -(1.0f+tmp)*exp(tmp)/(PI*sigma*sigma*sigma*sigma);
+}
+
+__device__ __host__
+float phi_xx(float x, float y, float xc, float yc, int lvl){
+	/*
+		This is the second derivative wrt x of the phi-function.
+	*/
+	return 0.0f; //FIX!s
+}
+
+__device__ __host__
+float phi_yy(float x, float y, float xc, float yc, int lvl){
+	/*
+		This is the second derivative wrt y of the phi-function.
+	*/
+	return 0.0f; //FIX!
+}
+
+void lowerTriGpu(const float *A, float *L, const int n){
+	for(int x=0; x<n; x++){
+		for(int y=0; y<n; y++){
+			if(y<=x){
+				L[x*n+y] = A[x*n+y];
+			}
+			else{
+				L[x*n+y] = 0.0f;
+			}
+		}
+	}
+}
+
+void upperTriGpu(const float *A, float *U, const int n){
+	for(int x=0; x<n; x++){
+		for(int y=0; y<n; y++){
+			if(y>x){
+				U[x*n+y] = A[x*n+y];
+			}
+			else{
+				U[x*n+y] = 0;
+			}
+		}
+	}
+}
 
 __host__
-float _normGpu(thrust::device_vector<float>& d_x){
+void matSolvGpu(float *A, float *x, float *b, int n){
 	/*
-		Calculates the norm of a vector using the GPU (and Thrust obvs).
+		Solves the eq Ax=b using Gauss-Seidel on the
+		GPU using CUBLAS.
 	*/
 	
-	// setup arguments
-    square<float>        unary_op;
-    thrust::plus<float> binary_op;
-    float init = 0.0f;
+	//A = L + U
+	float *L;
+	float *U;
 	
-	//calcs norm.
-	return  std::sqrt(thrust::transform_reduce(d_x.begin(), d_x.end(), unary_op, init, binary_op) );
-};
+	(float *) malloc(N * N * sizeof (*L));
+	(float *) malloc(N * N * sizeof (*U));
+	
+	lowerTriGpu(A, L, n);
+	upperTriGpu(A, U, n);
+	
+}
 
-void _matVecMultGpu(const float *A, const float *x, float *y, const int n) {
-	/*
-		Multiplies the matrix A by the vector x and stores the result in the
-		vector y. This is done on the GPU using CUBLAS.
-		Assumes A is n-by-n and stored in column-major form.
-	*/
+int main(){
 	
-	// Create a handle for CUBLAS
-     cublasHandle_t handle;
-     cublasCreate(&handle);
+	float *A=0;
+	float *devPtrA;
 	
-	//Seting up parameters in what seems to be the most stupid
-	//way possible. Oh, well!
-     const float alf = 1.0f;
-     const float bet = 0.0f;
-     const float *alpha = &alf;
-     const float *beta = &bet;
-     
-	//Does the actual y:=Ax calculation
-	cublasSgemv(handle,CUBLAS_OP_N, n, n, alpha,A, n, x,1, beta, y, 1);
+	A = (float *) malloc(N * N * sizeof (*A));
 	
-	// Destroy the handle
-     cublasDestroy(handle);
-};
+	
+	cudaError_t cudaStat;    
+    cublasStatus_t stat;
+    cublasHandle_t handle;
 
-void eigPowerMethodGpu(const std::vector<float> A, std::vector<float> &eigVec, float &eigVal, int len){
-	/*
-	
-		Uses the power method to calculate the eigen-vector (stored in eigVec) 
-		that corresponds to the greatest eigen-value (stored in eigVal) of the 
-		matrix A.
-		A is assumed to be in column-major form. It is further assumed to be an
-		len-by-len square matrix.
-	
-	*/
-	
-	//Copy the matrix to the GPU (aka device)
-	thrust::device_vector<float> mat(A.begin(), A.end());
-	
-	//Takes a first (sucky) guess at the eigen-vector.
-	thrust::device_vector<float> guess(len);
-	thrust::fill(guess.begin(), guess.end(), 1.0f);
-	thrust::device_vector<float> guess2(len);
-
-
-    float norm;
-	for(int iter=0; iter<200; ++iter){
-	
-		//Multiply the matrix mat with vector guess and store the result in guess2
-		_matVecMultGpu(thrust::raw_pointer_cast(&mat[0]), thrust::raw_pointer_cast(&guess[0]),
-				thrust::raw_pointer_cast(&guess2[0]), len);
-		
-		//Normalize guess2
-		norm = _normGpu(guess2);
-		thrust::transform(guess2.begin(),guess2.end(),thrust::make_constant_iterator(norm),
-						guess2.begin(),thrust::divides<float>());
-		
-		//Multiply the matrix mat with vector guess2 and store the result in guess
-		//Note that the pointers changed positions.
-		_matVecMultGpu(thrust::raw_pointer_cast(&mat[0]), thrust::raw_pointer_cast(&guess2[0]),	
-					thrust::raw_pointer_cast(&guess[0]), len);
-								
-		//Normalize guess
-		norm = _normGpu(guess);
-		thrust::transform(guess.begin(),guess.end(),thrust::make_constant_iterator(norm),
-						guess.begin(),thrust::divides<float>());
+	cudaStat = cudaMalloc ((void**)&devPtrA, N*N*sizeof(*A));
+	if (cudaStat != cudaSuccess) { 
+		std::cout<<"device memory allocation failed"<<std::endl;
+		return EXIT_FAILURE;
+	}
+	stat = cublasCreate(&handle); 
+	if (stat != CUBLAS_STATUS_SUCCESS) { 
+		std::cout<<"CUBLAS initialization failed"<<std::endl;
+		return EXIT_FAILURE;
+	} 
+	stat = cublasSetMatrix(N, N, sizeof(*A), A, N, devPtrA, N); 
+	if (stat != CUBLAS_STATUS_SUCCESS) { 
+		std::cout<<"data download failed"<<std::endl;
+		cudaFree (devPtrA);
+		cublasDestroy(handle); 
+		return EXIT_FAILURE;
 	}
 
-	//Copy the values back from the GPU.
-	//(Den här delen är dum o kan göras stört mkt snabbare. Jaja, det funkar.)
-	thrust::host_vector<float> eig=guess;
-	for(int i=0; i<len; i++){
-		eigVec[i] = eig[i];
-	}
+
+	cudaFree (devPtrA);
+    cublasDestroy(handle);
+    
+    free(A);
 	
-	eigVal = norm;
+	return 0;
 }
-}
+
