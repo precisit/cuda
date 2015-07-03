@@ -1,2 +1,5 @@
 all:
-	nvcc -lcublas -O2 -arch=sm_50 heat_eq_1.cu -o heat_eq_1
+	nvcc -lcublas -arch=sm_50 cuda_heat_eq.cu elementClass.cpp -o cuda_heat_eq
+	
+test:
+	nvcc -lcublas -arch=sm_50 unit_tests.cu elementClass.cpp -o unit_tests
