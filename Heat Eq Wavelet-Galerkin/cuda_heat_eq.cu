@@ -194,6 +194,8 @@ void waveGal(float *U_0, const int n, const float dt, const float endTime, const
 		//Solve A*u = b
 		matSolve(devA, devU, devB, n*n, 0.1f, handle);
 		
+		//måla här.
+		
 		t += dt;
 	}
 	
