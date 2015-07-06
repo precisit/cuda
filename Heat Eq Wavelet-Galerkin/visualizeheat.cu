@@ -1,13 +1,14 @@
+/*
+
 #ifdef __APPLE_CC__
 #include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
 #endif
-#include <time.h> 
-void color(int x, int array[]){
-	
-		
+#include <time.h>
 
+
+void color(int x, int array[]){
 		if (x==0){
 			array[0] = 1.0; array[1] = 0.0; array[2] = 0.0;	
 						
@@ -38,13 +39,7 @@ void color(int x, int array[]){
 		}
 		else {
 			array[0] = 0.0; array[1] = 0.0; array[2] = 1.0;
-			
 		}
-
-	 
-
-	
-
 }
 
 void display() {
@@ -56,19 +51,26 @@ void display() {
 	int colorarray[3];
 	//float m [number];
 	
+	int n = GLOBAL_N;
+	
+	int val;
+	float val_f;
 	
 	glBegin(GL_QUADS);
-	for (GLfloat x = 0; x < 10; x ++){
-		for (GLfloat y = 0; y < 10; y ++){
+	for (GLfloat x = 0; x < n; x ++){
+		for (GLfloat y = 0; y < n; y ++){
 			glVertex2f(x, y);  
 			glVertex2f(x+1, y);
 			glVertex2f(x+1, y+1);
 			glVertex2f(x, y+1);
 
 			//for (int k = 0; k < number; k++) {
-				int random = rand()%8;
+				//int random = rand()%8;
+				
+				val_f = GLOBAL_A[x*n+y]*7;
+				val = (int) (val_f);
 				//m[j] = random; 				
-				color(random, colorarray);
+				color(val, colorarray);
 				r = colorarray[0];
 				g = colorarray[1];
 				b = colorarray[2];
@@ -81,13 +83,12 @@ void display() {
 	}
 	glEnd();
 	glFlush();
-		
-		
+			
 }
 		
 	
 
-	
+	*/
 	
 	
 
@@ -107,23 +108,27 @@ void display() {
 
 
 
-
+/*
 void init() {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, 100, 100, 0, -1, 1);
 }
 
-/*void timer(int v) {
+void timer(int v) {
 	glutDisplayFunc(display);
 	glutPostRedisplay();
 	glutTimerFunc(v, timer, v);
 }
 
+*/
+
 
 /*
 void reshape() {
 }*/
+
+/*
 
 int main(int argc, char** argv) {
 
@@ -133,8 +138,10 @@ int main(int argc, char** argv) {
 	glutInitWindowSize(800, 800);		
 	glutCreateWindow("Test of Grid");
 	init();			
-	glutDisplayFunc(display);
+	//glutDisplayFunc(display);
 	//glutReshapeFunc(reshape);
-	//glutTimerFunc(100, timer, 0);			
+	glutTimerFunc(100, timer, 0);			
 	glutMainLoop();				
 }
+
+*/

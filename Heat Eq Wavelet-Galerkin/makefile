@@ -7,6 +7,6 @@ test:
 vis: makefile
 	nvcc -lGL -lGLU -lglut visualizeheat.cu -o vis
 	
-visHeat: makefile
-	nvcc -lcublas -lGL -lGLU -lglut -arch=sm_50 visualizeheat.cu cuda_heat_eq.cu elementClass.cpp -o cuda_heat_eq
+visHeat: makefile main.cu cuda_heat_eq.cu elementClass.cpp visualizeheat.cu
+	nvcc -lcublas -lGL -lGLU -lglut -arch=sm_50 main.cu cuda_heat_eq.cu elementClass.cpp visualizeheat.cu -o cuda_heat_eq
 	

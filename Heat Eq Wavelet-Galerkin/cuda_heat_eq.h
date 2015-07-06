@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "elementClass.h"
+#include "visualizeheat.h"
 
 //Returns the distance (measured in the chess king's norm) between 2 points.
 __host__ __device__

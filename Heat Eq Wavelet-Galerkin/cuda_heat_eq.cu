@@ -1,5 +1,10 @@
 #include "cuda_heat_eq.h"
 
+//extern float *GLOBAL_A(nullptr);
+extern int GLOBAL_N = 0;
+extern float* U_0(NULL);
+
+
 void prvec(float *A, int n){
 	for(int x=0; x<n; x++){
 		std::cout<<A[x]<<"   ";
@@ -47,6 +52,8 @@ void matSolve(const float *A, float *x, const float *b, const int n, const float
 	cublasScopy(handle, n, r, 1, p,1);
 	
 	for(int i=0; i<n; i++){
+		std::cout<<"hej?"<<std::endl;
+	
 		//Ap = A*p
 		cublasSgemv(handle,CUBLAS_OP_N,n,n,&one, A,n,p,1,&zero,Ap, 1);
 		
@@ -101,7 +108,7 @@ void setStiffMat(float *A, const class Element *phi, const int n){
 				for(int y2=0; y2<n; y2++){
 					d = dist(x1,y1,x2,y2);
 					if(d == 0){
-						A[(x1*n+y1)*n*n+(x2*n+y2)] = h*4.0f; //fett ad hoc! FIX! //O dessutom stämmer det nog inte. Eller?
+						A[(x1*n+y1)*n*n+(x2*n+y2)] = 4.0f/(h*h); //fett ad hoc! FIX! //O dessutom stämmer det nog inte. Eller?
 					}
 				}
 			}
@@ -137,6 +144,12 @@ void setMassMat(float *M, const class Element *phi, const int n){
 }
 
 void waveGal(float *U_0, const int n, const float dt, const float endTime, const float tol){
+
+
+	::U_0 = U_0;
+
+
+	::GLOBAL_N = n;
 	assert(endTime>0.0f);
 	assert(n>0);
 	
@@ -186,17 +199,24 @@ void waveGal(float *U_0, const int n, const float dt, const float endTime, const
 
 	const float one = 1.0f;
 	float zero = 0.0f;
+	
+	display();
 	while(t<endTime){
-		
 		//b = M_old*U_old;
 		cublasSgemv(handle, CUBLAS_OP_N, n*n, n*n,&one, devM, n*n, devU, 1, &zero, devB, 1); //M är förmodligen bandmarix. Använd annan funk!! //FIX
 		
 		//Solve A*u = b
 		matSolve(devA, devU, devB, n*n, 0.1f, handle);
 		
+		cublasGetVector(n*n, sizeof(float), devU, 1, U_0,1); //Det här är segt. FIX!
+
+		::U_0 = U_0;
+		
 		//måla här.
+		display();
 		
 		t += dt;
+		return;
 	}
 	
 	cublasGetVector(n*n, sizeof(*U_0), devU, 1, U_0, 1);
@@ -210,6 +230,179 @@ void waveGal(float *U_0, const int n, const float dt, const float endTime, const
 	
 }
 
+
+
+
+
+
+#ifdef __APPLE_CC__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+#include <time.h>
+
+
+void color(int x, int array[]){
+		if (x==0){
+			//std::cout<<"red"<<std::endl;
+			array[0] = 1.0; array[1] = 0.0; array[2] = 0.0;	
+						
+		}			
+		else if (x==1){
+			std::cout<<"not red"<<std::endl;
+			array[0] = 1.0; array[1] = 0.5; array[2] = 0.0;
+			
+		}
+		else if (x==2){
+			std::cout<<"not red"<<std::endl;
+			array[0] = 1.0; array[1] = 1.0; array[2] = 0.0;
+			
+		}
+		else if (x==3){
+			std::cout<<"not red"<<std::endl;
+			array[0] = 0.5; array[1] = 1.0; array[2] = 0.0;
+			
+		}
+		else if (x==4){
+			std::cout<<"not red"<<std::endl;
+			array[0] = 0.5; array[1] = 1.0; array[2] = 0.5;
+			
+		}
+		else if (x==5){
+			std::cout<<"not red"<<std::endl;
+			array[0] = 0.0; array[1] = 0.5; array[2] = 0.0;
+			
+		}
+		else if (x==6){
+			std::cout<<"not red"<<std::endl;
+			array[0] = 0.0; array[1] = 1.0; array[2] = 1.0;
+			
+		}
+		else {
+			std::cout<<"not red"<<std::endl;
+			array[0] = 0.0; array[1] = 0.0; array[2] = 1.0;
+		}
+}
+
+void display() {
+	glClear(GL_COLOR_BUFFER_BIT);			//clear buffers to preset values (Indicates the buffers currently enabled for color writing.)
+	//int number = 100;
+	int r;
+	int g;
+	int b;	
+	int colorarray[3];
+	//float m [number];
+	
+	int n = ::GLOBAL_N;
+	
+	int val;
+	float val_f;
+	
+	glBegin(GL_QUADS);
+	for (int x = 0; x < n; x ++){
+		for (int y = 0; y < n; y ++){
+		//std::cout<<"tjeeeeeeeeeena!"<<std::endl;
+			glVertex2f(x, y);  
+			glVertex2f(x+1, y);
+			glVertex2f(x+1, y+1);
+			glVertex2f(x, y+1);
+
+			//for (int k = 0; k < number; k++) {
+				//int random = rand()%8;
+				
+				val_f = ::U_0[x*n+y];
+				val = (int) (val_f*7.0f);
+				//m[j] = random; 				
+				color(val, colorarray);
+				r = colorarray[0];
+				g = colorarray[1];
+				b = colorarray[2];
+				glColor3f(r, g, b);
+				//}
+			//glMultMatrixf(m);
+		}
+	
+			
+	}
+	
+	//std::cout<<"klaaaaar"<<std::endl;
+	glEnd();
+	glFlush();
+			
+}
+		
+	
+
+	
+	
+	
+
+/*glBegin(GL_QUADS);
+	for (GLfloat i = 0; i<= 100; i ++){
+		for (GLfloat j = 0; j<= 100; j ++){
+		glVertex2f(i*2, j*2);
+		glVertex2f(i, j);
+		color(4, colorarray);
+			r = colorarray[0];
+			g = colorarray[1];
+			b = colorarray[2];
+			glColor3f(r, g, b);
+	}
+	}
+	glEnd();*/
+
+
+
+
+void init() {
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, ::GLOBAL_N, ::GLOBAL_N, 0, -1, 1);
+}
+
+void timer(int v) {
+	glutDisplayFunc(display);
+	glutPostRedisplay();
+	glutTimerFunc(v, timer, v);
+}
+
+
+/*
+void reshape() {
+}*/
+
+/*
+
+int main(int argc, char** argv) {
+
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB); 	
+	glutInitWindowPosition(200, 200);		
+	glutInitWindowSize(800, 800);		
+	glutCreateWindow("Test of Grid");
+	init();			
+	//glutDisplayFunc(display);
+	//glutReshapeFunc(reshape);
+	glutTimerFunc(100, timer, 0);			
+	glutMainLoop();				
+}
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 int main(){
 	int n = 3;
 	float* U_0;
@@ -227,3 +420,5 @@ int main(){
 	
 	return 0;
 }
+
+*/
