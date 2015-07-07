@@ -71,9 +71,18 @@ void MrWags::waveletGalerkinInit(){
 
 
 void MrWags::waveletGalerkinIter(){
+
+	for(int i= 0; i< this->n*this->n; i++){
+		assert(this->U[i] >= 0.0f);
+		assert(this->U[i] <= 1.0f);
+	}
+
+	std::cout<<"iter"<<std::endl;
+
 	const int n = this->n;
 	const float zero = 0.0f;
 	const float one = 1.0f;
+	this->t += this->dt;
 	
 	//b = A*U_old;
 	cublasSgemv(this->handle, CUBLAS_OP_N, n*n, n*n, &one, this->devA, n*n, this->devU, 1, &zero, devB, 1); //M är förmodligen bandmarix. Använd annan funk!! //FIX
@@ -82,6 +91,14 @@ void MrWags::waveletGalerkinIter(){
 	matSolve(this->devM, this->devU, this->devB, n*n, this->tol ,this->handle);
 		
 	cublasGetVector(n*n, sizeof(float), this->devU, 1, this->U,1); //Det här är segt. FIX!
+
+	for(int i= 0; i< this->n*this->n; i++){
+		assert(this->U[i] >= 0.0f);
+		assert(this->U[i] <= 1.0f);
+	}
+
+
+	assert(this->t < this->endTime);
 
 };
 
@@ -95,7 +112,13 @@ void MrWags::waveletGalerkinEnd(){
 	cublasDestroy(this->handle);
 }
 
+int MrWags::getN(){
+	return this->n;
+}
 
+float MrWags::getU(int x, int y){
+	return this->U[x*(this->n)+y];
+}
 
 
 
@@ -208,6 +231,7 @@ float MrWags::numIntergMass(T func1, T func2 , float x0, float x1, float y0, flo
 //Based on CG.
 void MrWags::matSolve(const float *A, float *x, const float *b, const int n, const float absTol, cublasHandle_t handle){
 	//Stolen from here: https://en.wikipedia.org/wiki/Conjugate_gradient_method
+
 	float *r, *p, *Ap;
 	float r_norm_old, r_norm;
 	
@@ -236,7 +260,8 @@ void MrWags::matSolve(const float *A, float *x, const float *b, const int n, con
 	cublasScopy(handle, n, r, 1, p,1);
 	
 	for(int i=0; i<n; i++){
-		//std::cout<<"hej?"<<std::endl;
+		
+		std::cout<<"matSolveIter"<<std::endl;
 	
 		//Ap = A*p
 		cublasSgemv(handle,CUBLAS_OP_N,n,n,&one, A,n,p,1,&zero,Ap, 1);
@@ -259,7 +284,7 @@ void MrWags::matSolve(const float *A, float *x, const float *b, const int n, con
 			break;
 		}
 		else{
-			assert(r_norm != 0.f);
+			assert(r_norm != 0.0f);
 		}
 		
 		//update beta
@@ -271,7 +296,7 @@ void MrWags::matSolve(const float *A, float *x, const float *b, const int n, con
 		 
 		 r_norm_old = r_norm;
 	}
-		
+	std::cout<<"matSolve END"<<std::endl;
 	cudaFree(r);
 	cudaFree(p);
 	cudaFree(Ap);
@@ -318,4 +343,3 @@ void MrWags::setMassMat(float *M, const Element *phi, const int n){
 		}
 	}
 }
-
