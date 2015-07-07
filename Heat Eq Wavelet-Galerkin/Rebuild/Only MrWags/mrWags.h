@@ -14,13 +14,9 @@
 #include <stdio.h>
 
 #include "elementClass.h"
-#include "matrixFuncs.h"
+//#include "matrixFuncs.h"
 
-#ifdef __APPLE_CC__
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
+
 #include <time.h>
 
 
@@ -32,7 +28,6 @@ class MrWags{
 		cublasHandle_t handle;
 		
 		void waveletGalerkinInit();
-		void waveletGalerkinIter();
 		void waveletGalerkinEnd();
 		
 		
@@ -83,6 +78,9 @@ void setupDrawCallback(){
 
 		
 	public:
+		void waveletGalerkinIter();
+		int getN();
+		float getU(int x, int y);
 		MrWags(float* U_0, const int n, const float dt, const float endTime, const float tol);
 };
 
