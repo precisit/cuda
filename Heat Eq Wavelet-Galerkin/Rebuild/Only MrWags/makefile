@@ -6,11 +6,14 @@ CC = nvcc
 all : $(OBJS) visualizeheat.cu
 	$(CC) $(LFLAGS) $(OBJS) visualizeheat.cu -o visualizeheat
 
-mrWags.o : mrWags.h mrWags.cpp elementClass.h elementClass.cpp
-	$(CC) $(CFLAGS) $(LFLAGS) mrWags.cpp
+mrWags.o : mrWags.h mrWags.cu elementClass.h elementClass.cpp
+	$(CC) $(CFLAGS) $(LFLAGS) mrWags.cu
 
 elementClass.o : elementClass.h elementClass.cpp
 	$(CC) $(CFLAGS) $(LFLAGS) elementClass.cpp
 
 clean:
 	\rm *.o *~visualizeheat
+
+tests: tests.cu
+	$(CC) $(LFLAGS) tests.cu -o tests

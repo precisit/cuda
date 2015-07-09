@@ -44,14 +44,14 @@ float Element::f(float x, float y){
 //The derivative of the function wrt x.
 //Based on central difference (O(h^2)) 
 float Element::f_x(const float x, const float y, const float dx){
-	return (this->f(x+dx,y)-this->f(x-dx,y))/(2*dx);
+	return (this->f(x+dx,y)-this->f(x-dx,y))/(2.0f*dx);
 };
 
 
 //The derivative of the function wrt y.
 //Based on central difference (O(h^2)) 
 float Element::f_y(const float x, const float y, const float dy){
-	return (this->f(x,y+dy)-this->f(x,y-dy))/(2*dy);
+	return (this->f(x,y+dy)-this->f(x,y-dy))/(2.0f*dy);
 };
 
 

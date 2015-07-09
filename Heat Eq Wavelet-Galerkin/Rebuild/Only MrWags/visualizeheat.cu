@@ -4,15 +4,13 @@
 #include <GL/glut.h>
 #endif
 #include <time.h> 
-//#include "cuda_heat_eq.h"
 
 #include "mrWags.h"
-
-//extern float* start(int n, float U_array[]);
+#include <unistd.h>
 
 MrWags *globalMrWags; //GLÖÖÖÖM INTE, SIMBA!
 
-
+/*
 void color(float x, float array[]){
 
         
@@ -51,16 +49,29 @@ void color(float x, float array[]){
             
         }
 }
+*/
+void color(float x, float array[]){        
+
+    if(x<0.0){
+        x = 0.0;
+    }
+
+    array[0] = 1.0; array[1] = 1.0 - x; array[2] = 0.0; array[3] = 1.0;
+    
+}
+
 
 void display() {
     std::cout<<"display()"<<std::endl;
     
     glClear(GL_COLOR_BUFFER_BIT);            //clear buffers to preset values (Indicates the buffers currently enabled for color writing.)
     //int number = 100;
-    int r;
-    int g;
-    int b;    
-    float colorarray[3];
+    GLfloat r;
+    GLfloat g;
+    GLfloat b;
+    GLfloat a;    
+    float colorarray[4];
+
     int i = 0;
     int j = 0;
 
@@ -86,13 +97,14 @@ void display() {
             
             //num = array[i*n+j]; 
             num = ::globalMrWags->getU(i,j); //U[i*n+j];
-            std::cout<<"num: "<<num<<std::endl;
+            std::cout<<num<<std::endl;
             //int random = rand()%8;
             color(num, colorarray);
             r = colorarray[0];
             g = colorarray[1];
             b = colorarray[2];
-            glColor3f(r, g, b);
+            a = colorarray[3];
+            glColor4f(r, g, b, a);
 
             i++;
     
@@ -102,9 +114,15 @@ void display() {
     }
     glEnd();
     glFlush();
+    unsigned int micro = 100000;
+
+    usleep(micro);
+    display();
 }
 
 void init() {
+    glClearColor (1.0, 0.0, 0.0, 1.0);
+
     glMatrixMode(GL_PROJECTION);                //specify which matrix is the current matrix (Applies subsequent matrix operations to the projection matrix stack)
     glLoadIdentity();
     
@@ -112,7 +130,8 @@ void init() {
     glOrtho(0, n, n, 0, -1, 1);
 }
 
-/*void timer(int v) {
+/*
+void timer(int v) {
     glutDisplayFunc(display);                //sets the display callback for the current window. When GLUT determines that the normal plane for the window needs to be redisplayed, the display callback for the window is called.
     
     glutPostRedisplay();                    //marks the current window as needing to be redisplayed.
@@ -126,11 +145,16 @@ void reshape() {
 int main(int argc, char** argv) {
 
     float *U_0;
-    int n = 4;
+    int n = 10;
     U_0 = (float*) calloc (n*n,sizeof(*U_0));
-    U_0[n*n/2] = 1.0f;
+    for(int i=0; i<n*n; i++){
+    	U_0[i] = 0.01f;
+    }
+    U_0[n*n/2+n/2] = 1.0f;
+    U_0[n*n/2+n/2+1] = 0.0f;
+    U_0[n*n/2+n/2-1] = 0.0f;
     
-    globalMrWags = new MrWags(U_0, n, 0.001f, 1.0f, 0.05f);
+    globalMrWags = new MrWags(U_0, n, 0.00025f, 1.0f, 0.0001f);
 
     for(int i = 0; i<n; i++){
         for(int j = 0; j<n; j++){

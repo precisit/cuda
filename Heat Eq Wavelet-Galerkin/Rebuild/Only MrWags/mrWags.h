@@ -13,6 +13,9 @@
 #include <iostream>
 #include <stdio.h>
 
+
+#include <string>
+
 #include "elementClass.h"
 //#include "matrixFuncs.h"
 
@@ -22,15 +25,15 @@
 
 class MrWags{
 	private: 
-		float* U, *devU, *devA, *devM, *devB;
+		float* U, *devU, *devA, *devM, *devB, *devStorage;
 		int n;
 		float dt, endTime, tol, t;
 		cublasHandle_t handle;
 		
 		void waveletGalerkinInit();
 		void waveletGalerkinEnd();
-		
-		
+		void prmatgpu(float *devA, int n);
+		void prvecgpu(float *devA, int n);
 		
 		/*static void drawCallback(){
 	currentInstance->draw();
@@ -54,7 +57,7 @@ void setupDrawCallback(){
 
 		//Returns the distance (measured in the chess king's norm) between 2 points.
 		__host__ __device__
-		int dist(const int x1, const int y1, const int x2, const int y2);
+		int dist_l1(const int x1, const int y1, const int x2, const int y2);
 
 		//Sets up the Mass matrix M according to stuff.
 		template<typename Element>
@@ -65,10 +68,10 @@ void setupDrawCallback(){
 		void setStiffMat(float *A, const Element *phi, const int n);
 
 		//Solves Ax=b for x. (A is n-by-n).
-		//Uses a hella lot of CUBLAS operations to do a Gauss-Seidel iteration.
+		//Uses a hella lot of CUBLAS operations to do a Conjugate Gradient iteration.
 		//(Should probablably implement a Multigrid solver some time.)
 		__host__
-		void matSolve(const float *A, float *x, const float *b, const int n, const float tol, cublasHandle_t handle);
+		void matSolve(const float *A, float *x, float *b, const int n, const float tol, cublasHandle_t handle);
 
 
 
@@ -80,7 +83,7 @@ void setupDrawCallback(){
 	public:
 		void waveletGalerkinIter();
 		int getN();
-		float getU(int x, int y);
+		float getU(const int x, const int y);
 		MrWags(float* U_0, const int n, const float dt, const float endTime, const float tol);
 };
 
