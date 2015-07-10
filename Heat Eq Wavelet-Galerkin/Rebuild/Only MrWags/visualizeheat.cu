@@ -1,133 +1,115 @@
 #ifdef __APPLE_CC__
+#include <iostream>
 #include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
 #endif
 #include <time.h> 
-
 #include "mrWags.h"
 #include <unistd.h>
 
 MrWags *globalMrWags; //GLÖÖÖÖM INTE, SIMBA!
 
-/*
-void color(float x, float array[]){
+void color(float x, float array[]){ 
 
-        
+   x = (x+0.2f)/1.2f; //Ta bort den här!
 
+   if(x<0.0){
+       x = 0.0;
+   }
 
-        if (x>0.84 && x<=1.0){
-            array[0] = 1.0; array[1] = 0.0; array[2] = 0.0;    
-                        
-        }            
-        else if (x>0.70 && x<0.84){
-            array[0] = 1.0; array[1] = 0.5; array[2] = 0.0;
-            
-        }
-        else if (x>0.56 && x<=0.70){
-            array[0] = 1.0; array[1] = 1.0; array[2] = 0.0;
-            
-        }
-        else if (x>0.42 && x<=0.56){
-            array[0] = 0.5; array[1] = 1.0; array[2] = 0.0;
-            
-        }
-        else if (x>0.28 && x<=0.42){
-            array[0] = 0.5; array[1] = 1.0; array[2] = 0.5;
-            
-        }
-        else if (x>0.14 && x<=0.28){
-            array[0] = 0.5; array[1] = 1.0; array[2] = 1.0;
-            
-        }
-        else if (x>0.0 && x<=0.14){
-            array[0] = 0.0; array[1] = 1.0; array[2] = 1.0;
-            
-        }
-        else {
-            array[0] = 0.0; array[1] = 0.0; array[2] = 1.0;
-            
-        }
-}
-*/
-void color(float x, float array[]){        
-
-    if(x<0.0){
-        x = 0.0;
-    }
-
-    array[0] = 1.0; array[1] = 1.0 - x; array[2] = 0.0; array[3] = 1.0;
-    
+   array[0] = 1.0; array[1] = 1.0 - x; array[2] = 0.0; array[3] = 1.0;
+   
 }
 
 
 void display() {
     std::cout<<"display()"<<std::endl;
     
-    glClear(GL_COLOR_BUFFER_BIT);            //clear buffers to preset values (Indicates the buffers currently enabled for color writing.)
-    //int number = 100;
-    GLfloat r;
-    GLfloat g;
-    GLfloat b;
-    GLfloat a;    
-    float colorarray[4];
+    	glClear(GL_COLOR_BUFFER_BIT);            //clear buffers to preset values (Indicates the buffers currently enabled for color writing.)
+    	//int number = 100;
+	GLfloat r;
+	GLfloat g;
+	GLfloat b;
+	GLfloat a;
+	int i = 0;
+    	int j;	
+	float num;
+	float colorarray[4];    	
+	//int n = 50; // FIX!
+    	const int n = ::globalMrWags->getN();
 
-    int i = 0;
-    int j = 0;
+	//float U_array[n*n];    
+	//float *array;
+	//array = start(n, U_array);
+	
+	::globalMrWags->waveletGalerkinIter();
 
-    //int n = 50; // FIX!
-    const int n = ::globalMrWags->getN();
-
-    //float U_array[n*n];    
-    //float *array;
-    //array = start(n, U_array);
-
-    ::globalMrWags->waveletGalerkinIter();
-
-    float num;
-    
     glBegin(GL_QUADS);
-    for (GLfloat x = 0; x < n; x ++){ 
-        i=0;
-        for (GLfloat y = 0; y < n; y ++){
-            glVertex2f(x, y);  
-            glVertex2f(x+1, y);
-            glVertex2f(x+1, y+1);
-            glVertex2f(x, y+1);
-            
-            //num = array[i*n+j]; 
-            num = ::globalMrWags->getU(i,j); //U[i*n+j];
-            std::cout<<num<<std::endl;
-            //int random = rand()%8;
-            color(num, colorarray);
-            r = colorarray[0];
-            g = colorarray[1];
-            b = colorarray[2];
-            a = colorarray[3];
-            glColor4f(r, g, b, a);
 
-            i++;
-    
-            //glShadeModel(GL_SMOOTH);
-        }
-        j++;
-    }
-    glEnd();
-    glFlush();
-    unsigned int micro = 100000;
-
-    usleep(micro);
-    display();
+    for (GLfloat x = 1; x < n-1; x ++){
+		j=0;
+		for (GLfloat y = 1; y < n-1; y ++){	
+		
+			num = ::globalMrWags->getU(i+1,j);
+			color(num, colorarray);
+			r = colorarray[0];
+			g = colorarray[1];
+			b = colorarray[2];
+			a = colorarray[3];
+			glColor4f(r, g, b, a);	
+			glVertex2f(x+1, y);
+				
+			num = ::globalMrWags->getU(i,j);
+			color(num, colorarray);
+			r = colorarray[0];
+			g = colorarray[1];
+			b = colorarray[2];
+			a = colorarray[3];
+			glColor4f(r, g, b, a);
+			glVertex2f(x, y); 
+				
+			num = ::globalMrWags->getU(i,j+1);
+			color(num, colorarray);
+			r = colorarray[0];
+			g = colorarray[1];
+			b = colorarray[2];
+			a = colorarray[3];
+			glColor4f(r, g, b, a);			
+			glVertex2f(x, y+1);
+					
+			num = ::globalMrWags->getU(i+1,j+1);
+			color(num, colorarray);
+			r = colorarray[0];
+			g = colorarray[1];
+			b = colorarray[2];
+			a = colorarray[3];
+			glColor4f(r, g, b, a);
+			glVertex2f(x+1, y+1);
+			
+			
+			j++;		
+		}				
+		i++;	
+	}
+	glEnd();
+	//glutSwapBuffers();
+	glFlush();
+	unsigned int micro = 100000;
+    	usleep(micro);
+	//glutPostRedisplay();        
+    	display();
 }
 
 void init() {
-    glClearColor (1.0, 0.0, 0.0, 1.0);
+    glClearColor (0.0, 0.0, 0.0, 1.0);
 
     glMatrixMode(GL_PROJECTION);                //specify which matrix is the current matrix (Applies subsequent matrix operations to the projection matrix stack)
     glLoadIdentity();
     
     const int n = ::globalMrWags->getN();
     glOrtho(0, n, n, 0, -1, 1);
+	glShadeModel(GL_SMOOTH); 
 }
 
 /*
@@ -137,7 +119,6 @@ void timer(int v) {
     glutPostRedisplay();                    //marks the current window as needing to be redisplayed.
     glutTimerFunc(v, timer, v);                //registers a timer callback to be triggered in a specified number of milliseconds.
 }
-
 /*
 void reshape() {
 }*/
@@ -145,16 +126,20 @@ void reshape() {
 int main(int argc, char** argv) {
 
     float *U_0;
-    int n = 10;
+    int n = 40;
     U_0 = (float*) calloc (n*n,sizeof(*U_0));
     for(int i=0; i<n*n; i++){
-    	U_0[i] = 0.01f;
+    	U_0[i] = 0.0f;
     }
-    U_0[n*n/2+n/2] = 1.0f;
-    U_0[n*n/2+n/2+1] = 0.0f;
-    U_0[n*n/2+n/2-1] = 0.0f;
+
+	for(int x=n/2-4; x<n/2+4; x++){
+       for(int y=n/2-4; y<n/2+4; y++){
+           U_0[x*n+y]=1.0f;
+       }
+   }
     
-    globalMrWags = new MrWags(U_0, n, 0.00025f, 1.0f, 0.0001f);
+    
+    globalMrWags = new MrWags(U_0, n, 0.00001f, 1.0f, 0.0001f);
 
     for(int i = 0; i<n; i++){
         for(int j = 0; j<n; j++){
@@ -164,8 +149,8 @@ int main(int argc, char** argv) {
 
     glutInit(&argc, argv);                    //initialize the GLUT library.
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);         //sets the initial display mode (Bit mask to select a single buffered window; Bit mask to select an RGBA mode window)
-    glutInitWindowPosition(200, 200);            //set the initial window position.
-    glutInitWindowSize(800, 800);                //set the initial window size.
+    glutInitWindowPosition(0, 0);            //set the initial window position.
+    glutInitWindowSize(2000, 1500);                //set the initial window size.
     glutCreateWindow("Simulation of Heat equation");    //Create a top-level window, give de window a name.
     init();            
     glutDisplayFunc(display);
