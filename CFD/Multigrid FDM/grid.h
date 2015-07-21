@@ -10,13 +10,17 @@ class Grid
         stuff like the differential operator and B.C and the ptrs
         to the correct nodes.
 
-        And also: STAGGERD GRIDS SUCK AND WE DO IT OLD SCHOOL!
+        And also: STAGGERED GRIDS SUCK AND WE DO IT OLD SCHOOL!
     */
  
     public:
         Node* ptr;
         int len;
+        Node* B;
         datatype h;
+
+        Grid* finerGrid;
+        Grid* coarserGrid;
  
         void print();
  
@@ -40,7 +44,7 @@ class Grid
         void jacobiSmootherLaplacian();
         void jacobiSmootherVortTranspDisc();
 
-        void calculateError();
+        void calculateErrorLaplacian();
  
         //Constructors
         Grid(Node* nodeIn, const int nIn);
@@ -48,5 +52,5 @@ class Grid
         Grid();
  
         //Destructor
-        ~Grid();
+        //~Grid();
 };

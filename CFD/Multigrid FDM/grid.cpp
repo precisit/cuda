@@ -10,21 +10,40 @@
 		void Grid::print(){
 			int n = this-> len;
 
-			for(int x=0; x<n; x++){
-				for(int y=0; y<n; y++){
-					if(this->ptr[x+y*n].p == 0.0f){
-						printf("0         ");
-					}
-					else if(this->ptr[x+y*n].p>0.0f){
-				 		printf ("%3f  ", this->ptr[x+y*n].p);
-						//std::cout<<A[x+y*n]<<"   ";
-					}
-					else{
-						printf ("%3f ", this->ptr[x+y*n].p);
+			#ifdef VORTSTREAM
+				for(int x=0; x<n; x++){
+					for(int y=0; y<n; y++){
+						if(this->ptr[x+y*n].vort == 0.0f){
+							printf("0         ");
+						}
+						else if(this->ptr[x+y*n].vort>0.0f){
+					 		printf ("%3f  ", this->ptr[x+y*n].vort);
+							//std::cout<<A[x+y*n]<<"   ";
+						}
+						else{
+							printf ("%3f ", this->ptr[x+y*n].vort);
+						}
 					}
 				}
-				std::cout<<std::endl;
-			}
+					std::cout<<std::endl;
+			#else
+
+				for(int x=0; x<n; x++){
+					for(int y=0; y<n; y++){
+						if(this->ptr[x+y*n].p == 0.0f){
+							printf("0         ");
+						}
+						else if(this->ptr[x+y*n].p>0.0f){
+					 		printf ("%3f  ", this->ptr[x+y*n].p);
+							//std::cout<<A[x+y*n]<<"   ";
+						}
+						else{
+							printf ("%3f ", this->ptr[x+y*n].p);
+						}
+					}
+					std::cout<<std::endl;
+				}
+			#endif
 		}
 
 		void Grid::restrict(Grid* coarseGrid){
@@ -34,7 +53,7 @@
 
 			for( int iter1= 0; iter1<n; iter1 += 2){
 				for( int iter2 = 0; iter2<n; iter2++ ){
-					if( iter2 % 2 == 0){
+					if( iter2 % 2 == 0 ){
 						coarseGrid->ptr[counter]  =  this->ptr[iter1*n + iter2];
 						counter++;
 					}
@@ -87,33 +106,63 @@
 		};
 
 		datatype Grid::getU(const int index){
-			assert(index < 3*this->len*this->len);
-			assert(index >= 0);
 
-			if( index < this->len*this->len ){
-				return this->ptr[index].p;
-			}
-			else if( index < 2*this-> len*this->len ){
-				return ptr[index-1*this-> len*this->len].v_x;
-			}
-			else{
-				return ptr[index-2*this-> len*this->len].v_y;
-			}
+			#ifdef VORTSTREAM
+				assert(index < 3*this->len*this->len);
+				assert(index >= 0);
+
+				if( index < this->len * this->len ){
+					return this->ptr[index].vort;
+				}
+				else if( index < 2 * this->len * this->len ){
+					return ptr[index-1*this-> len*this->len].stream_x;
+				}
+				else{
+					return ptr[index- 2 * this->len * this->len].stream_y;
+				}
+			#else
+				assert(index < 3*this->len*this->len);
+				assert(index >= 0);
+
+				if( index < this->len * this->len ){
+					return this->ptr[index].p;
+				}
+				else if( index < 2 * this->len * this->len ){
+					return ptr[index-1*this-> len*this->len].v_x;
+				}
+				else{
+					return ptr[index- 2 * this->len * this->len].v_y;
+				}
+			#endif
 		}
 
 		void Grid::setU(const datatype u, const int index){
 			assert(index < 3*this->len*this->len);
 			assert(index >= 0);
 
-			if( index < this->len*this->len ){
-				ptr[index].p = u;
-			}
-			else if( index < 2*this->len*this->len ){
-				ptr[index].v_x = u;
-			}
-			else{
-				ptr[index].v_y = u;
-			}
+			#ifdef VORTSTREAM
+				if( index < this->len*this->len ){
+					ptr[index].vort = u;
+				}
+				else if( index < 2*this->len*this->len ){
+					ptr[index].stream_x = u;
+				}
+				else{
+					ptr[index].stream_y = u;
+				}
+
+			#else
+
+				if( index < this->len*this->len ){
+					ptr[index].p = u;
+				}
+				else if( index < 2*this->len*this->len ){
+					ptr[index].v_x = u;
+				}
+				else{
+					ptr[index].v_y = u;
+				}
+			#endif
 		}
 
 		datatype Grid::getLaplacian(const int i, const int j){
@@ -166,6 +215,8 @@
 		}
 
 		datatype Grid::getB(const int i){
+			assert(i>=0);
+			assert(i<this->len*len*3);
 			return 0.0f;
 		} //FIX!
 
@@ -189,7 +240,7 @@
 				for(int j=0; j<this->len*this->len; j++){
 					if(j != i){
 
-						tmpSum += -this->getLaplacian(i,j)*(this->getU(i));
+						tmpSum -= this->getLaplacian(i,j)*(this->getU(i));
 
 					}
 				}
@@ -243,9 +294,19 @@
 		};
 
 
-		void Grid::calculateError(){
+		void Grid::calculateErrorLaplacian(){
 			/*
-
-			*/
 			
+			*/
+
+			datatype sum;
+			//The 2 below is only for the vort-stream formulation. Should be 3 otherwise.
+			for(int i=0; i<len*len; i++){
+				sum = 0.0f;
+				for(int j=0; j<len*len; j++){
+
+				}
+			}
+
+
 		};
