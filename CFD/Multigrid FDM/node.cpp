@@ -1,4 +1,11 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <assert.h>
+#include <cmath>
+
 #define datatype float
+#define Re 10.0f
 
 class Node
 {
@@ -22,9 +29,7 @@ public:
 	datatype vort, stream;
 
 	//This sets the vorticity and stream variables
-	updateVorticityAndStream(Node* left, Node* right, Node* up, Node* down){
-		
-	}
+	void updateVorticityAndStream(Node* left, Node* right, Node* up, Node* down);
 
 	//Constructors
 	Node(){
