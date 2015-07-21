@@ -14,7 +14,7 @@ void _rotateHilbert(int n, int *x, int *y, int rx, int ry) {
         *x = *y;
         *y = t;
     }
-}
+};
  
 int index2Hilbert(int x, int y, const int n){
     /*
@@ -32,7 +32,7 @@ int index2Hilbert(int x, int y, const int n){
         _rotateHilbert(s, &x, &y, rx, ry);
     }
     return d;
-}
+};
  
 void hilbert2index(const int d, const int n, int* x, int* y){
     /*
@@ -50,4 +50,4 @@ void hilbert2index(const int d, const int n, int* x, int* y){
         *y += s * ry;
         t /= 4;
     }
-}
+};
