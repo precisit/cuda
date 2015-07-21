@@ -18,6 +18,14 @@ public:
 	//Preasure and velocity.
 	datatype p, v_x, v_y;
 
+
+	datatype vort, stream;
+
+	//This sets the vorticity and stream variables
+	updateVorticityAndStream(Node* left, Node* right, Node* up, Node* down){
+		
+	}
+
 	//Constructors
 	Node(){
 		this->x = 0.0f;
