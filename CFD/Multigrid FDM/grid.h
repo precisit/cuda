@@ -68,6 +68,7 @@ class Grid
         //Destructor
         ~Grid();
 
+        bool isInternal(const int x, const int y);
 
         void addSomeStuffTogether();
 };

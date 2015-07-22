@@ -14,15 +14,15 @@
 			#ifdef VORTSTREAM
 				for(int x=0; x<n; x++){
 					for(int y=0; y<n; y++){
-						if(this->ptr[x+y*n].vort == 0.0f){
+						if(this->ptr[x+y*n].stream_x == 0.0f){
 							printf("0         ");
 						}
-						else if(this->ptr[x+y*n].vort>0.0f){
-					 		printf ("%3f  ", this->ptr[x+y*n].vort);
+						else if(this->ptr[x+y*n].stream_x>0.0f){
+					 		printf ("%3f  ", this->ptr[x+y*n].stream_x);
 							//std::cout<<A[x+y*n]<<"   ";
 						}
 						else{
-							printf ("%3f ", this->ptr[x+y*n].vort);
+							printf ("%3f ", this->ptr[x+y*n].stream_x);
 						}
 					}
 				std::cout<<std::endl;
@@ -56,7 +56,7 @@
 						if(this->B[x+y*n].vort == 0.0f){
 							printf("0         ");
 						}
-						else if(this->B[x+y*n].vort>0.0f){
+						else if(this->B[x+y*n].vort > 0.0f){
 					 		printf ("%3f  ", this->B[x+y*n].vort);
 							//std::cout<<A[x+y*n]<<"   ";
 						}
@@ -597,4 +597,16 @@
 			free(ptr);
 			free(D);
 			free(B);
+		}
+
+		bool Grid::isInternal(const int x, const int y){
+			if(x==0 || x==len-1){
+				return false;
+			}
+			else if(y==0 || y==len-1){
+				return false;
+			}
+			else{
+				return true;
+			}
 		}
