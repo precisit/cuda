@@ -17,16 +17,25 @@ class Grid
         Node* ptr;
         int len;
         Node* B;
+
+        //This is the error on the grid. It dumb to store it here. 
+        //It's dumb to store it at all. OPT!
+        Node* D;
+
         datatype h;
 
         Grid* finerGrid;
         Grid* coarserGrid;
  
         void print();
+        void printB();
+        void printD();
  
         void restrict(Grid* coarseGrid);
+        void restrictDtoB(Grid* coarseGrid);
  
         void interpolate(Grid* fineGrid, const int fineN);
+        void interpolateB(Grid* fineGrid, const int fineN);
  
         void setValues(Node* ptrIn, int n);
  
@@ -35,7 +44,12 @@ class Grid
  
         datatype getLaplacian(const int i, const int j);
         datatype getVortTranspDisc(const int i, const int j);
+
         datatype getB(const int i);
+        void setB(const datatype u, const int index);
+
+        datatype getD(const int i);
+        void setD(const datatype u, const int index);
  
         int lengthOfFinerGrid();
  
@@ -52,5 +66,8 @@ class Grid
         Grid();
  
         //Destructor
-        //~Grid();
+        ~Grid();
+
+
+        void addSomeStuffTogether();
 };

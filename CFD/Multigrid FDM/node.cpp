@@ -75,6 +75,26 @@ public:
 	#endif
 	};
 
+	/*
+	void operator=(const Node& rhs){
+			this->x = rhs.x;
+			this->y = rhs.y;
+
+			this->x_index = rhs.x_index;
+			this->y_index = rhs.y_index;
+
+		#ifdef VORTSTREAM
+			this->vort = rhs.vort;
+			this->stream_x = rhs.stream_x;
+			this->stream_y = rhs.stream_y;
+		#else
+			this->p = rhs.p;
+			this->v_x = rhs.v_x;
+			this->v_y = rhs.v_y;
+		#endif
+	};
+	*/
+	
 	//Addition operator
 	Node operator+(const Node& rhs){
 		#ifdef VORTSTREAM
