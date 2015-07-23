@@ -223,7 +223,7 @@ void ALLOFTHESHITTOGETHER(Grid* grid, datatype dt, datatype t_end){
 		}
 
 		for(int iter = 0; iter < 20; iter++){
-			multigridCycleLaplacian(2, grid, 10, 10, 100);
+			multigridCycleLaplacian(3, grid, 20, 20, 50);
 		}
 
 		for(int i=0; i<grid->len * grid->len; i++){
@@ -241,8 +241,14 @@ void ALLOFTHESHITTOGETHER(Grid* grid, datatype dt, datatype t_end){
 		}
 
 		std::cout<<"A=[";
-		grid->print();
-		std::cout<<std::endl<<"];\n mesh(A); drawnow; pause(0.1);";
+		grid->printVelx();
+		std::cout<<std::endl<<"];"<<std::endl;
+
+		std::cout<<"B=[";
+		grid->printVely();
+		std::cout<<std::endl<<"];"<<std::endl;
+
+		std::cout<<"quiver(A,B); drawnow; pause(0.1);";
 		std::cout<<std::endl;
 
 		t += dt;
@@ -253,7 +259,7 @@ void ALLOFTHESHITTOGETHER(Grid* grid, datatype dt, datatype t_end){
 
 int main(){
 
-	int n = 9;
+	int n = 17;
 
 	Node* allPointers;
 	allPointers = (Node*) malloc(n*n*sizeof(Node));
@@ -270,7 +276,7 @@ int main(){
 	}*/
 
 
-	ALLOFTHESHITTOGETHER(&finestGrid, 0.02f, 1.0f);
+	ALLOFTHESHITTOGETHER(&finestGrid, 0.004f, 2.0f);
 
 	/*
 	for(int i=0; i<n*n; i++){

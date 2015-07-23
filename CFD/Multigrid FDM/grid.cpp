@@ -47,6 +47,89 @@
 			#endif
 		}
 
+
+		void Grid::printVelx(){
+			int n = this-> len;
+
+			#ifdef VORTSTREAM
+				datatype tmp;
+				for(int x=1; x<n-1; x++){
+					for(int y=1; y<n-1; y++){
+						tmp = (this->ptr[x+1+y*n].stream_x - this->ptr[x-1+y*n].stream_x)/(2.0f*this->h);
+						if(tmp == 0.0f){
+							printf("0         ");
+						}
+						else if(tmp>0.0f){
+					 		printf ("%3f  ", tmp);
+							//std::cout<<A[x+y*n]<<"   ";
+						}
+						else{
+							printf ("%3f ", tmp);
+						}
+					}
+				std::cout<<std::endl;
+				}
+			#else
+
+				for(int x=0; x<n; x++){
+					for(int y=0; y<n; y++){
+						if(this->ptr[x+y*n].v_x == 0.0f){
+							printf("0         ");
+						}
+						else if(this->ptr[x+y*n].v_x>0.0f){
+					 		printf ("%3f  ", this->ptr[x+y*n].v_x);
+							//std::cout<<A[x+y*n]<<"   ";
+						}
+						else{
+							printf ("%3f ", this->ptr[x+y*n].v_x);
+						}
+					}
+				std::cout<<std::endl;
+				}
+			#endif
+		}
+
+		void Grid::printVely(){
+			int n = this-> len;
+
+			#ifdef VORTSTREAM
+				datatype tmp;
+				for(int x=1; x<n-1; x++){
+					for(int y=1; y<n-1; y++){
+						tmp = -(this->ptr[x+(y+1)*n].stream_x - this->ptr[x+(y-1)*n].stream_x)/(2.0f*this->h);
+						if(tmp == 0.0f){
+							printf("0         ");
+						}
+						else if(tmp>0.0f){
+					 		printf ("%3f  ", tmp);
+							//std::cout<<A[x+y*n]<<"   ";
+						}
+						else{
+							printf ("%3f ", tmp);
+						}
+					}
+				std::cout<<std::endl;
+				}
+			#else
+
+				for(int x=0; x<n; x++){
+					for(int y=0; y<n; y++){
+						if(this->ptr[x+y*n].v_x == 0.0f){
+							printf("0         ");
+						}
+						else if(this->ptr[x+y*n].v_x>0.0f){
+					 		printf ("%3f  ", this->ptr[x+y*n].v_x);
+							//std::cout<<A[x+y*n]<<"   ";
+						}
+						else{
+							printf ("%3f ", this->ptr[x+y*n].v_x);
+						}
+					}
+				std::cout<<std::endl;
+				}
+			#endif
+		}
+
 		void Grid::printB(){
 			int n = this-> len;
 

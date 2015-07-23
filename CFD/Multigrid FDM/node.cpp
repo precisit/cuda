@@ -5,7 +5,7 @@
 #include <cmath>
 
 #define datatype float
-#define Re 10.0f
+#define Re 30.0f
 #define VORTSTREAM
 
 class Node

@@ -30,6 +30,8 @@ class Grid
         void print();
         void printB();
         void printD();
+        void printVelx();
+        void printVely();
  
         void restrict(Grid* coarseGrid);
         void restrictDtoB(Grid* coarseGrid);
