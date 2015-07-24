@@ -19,6 +19,8 @@ class Node
 public:
 	//Position
 	datatype x, y;
+	bool isPicked;
+	int layer;
 
 	//Index of Position
 	int x_index, y_index;
@@ -39,6 +41,8 @@ public:
 
 	//Constructors
 	Node(){
+		this->isPicked = false;
+		this->layer = 0;
 		this->x = 0.0f;
 		this->y = 0.0f;
 
@@ -58,6 +62,8 @@ public:
 
 	Node(const datatype x_in, const datatype y_in, const int x_index_in, const int y_index_in,
 	 const datatype p_in, const datatype v_x_in, const datatype v_y_in){
+		this->isPicked = false;
+		this->layer = 0;
 		this->x = x_in;
 		this->y = y_in;
 
@@ -79,10 +85,8 @@ public:
 	void operator=(const Node& rhs){
 			this->x = rhs.x;
 			this->y = rhs.y;
-
 			this->x_index = rhs.x_index;
 			this->y_index = rhs.y_index;
-
 		#ifdef VORTSTREAM
 			this->vort = rhs.vort;
 			this->stream_x = rhs.stream_x;
