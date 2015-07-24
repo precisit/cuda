@@ -132,6 +132,16 @@ datatype* firstPonterFromGridLevel(const int* nodesPerLevel, const int level, co
 	return ptr;
 	
 }
+__global__ void addVectors(datatype* y, const datatype* x, const int n){
+	// y = y + x
+	// Make sure that they are all of length n
+	const int i= threadIdx.x + blockIdx.x*blockDim.x;
+
+	if(i<n){
+		y[i] += x[i];
+	}
+}
+
 
 void multigrid(const int k, datatype* u, datatype* b, datatype* v, const int n ,
 	 const int preSmoothingIterations, const int solvingSmoothingIterations, 
@@ -188,8 +198,19 @@ void multigrid(const int k, datatype* u, datatype* b, datatype* v, const int n ,
 	    multigridCycleLaplacian(k-1, u,b,v, (n-1)/2+1, preSmoothingIterations, solvingSmoothingIterations, postSmoothingIterations, nodesPerLevel, numberOfLevels, u_coarse, b_coarse, v_coarse);
 	}
 
-	interpolate(&tmpGrid, coarseGrid.lengthOfFinerGrid());
+	interpolate(&tmpGrid, coarseGrid.lengthOfFinerGrid()); //Den här raden e inte klar. FIX!
 
+	//Remove (some of) the error from u_current
+	addVectors<<<1,block_size_1d>>>(u_current,v_current, n);
+
+	//Post-smoothing.
+	for (int iter = 0; iter < postSmoothingIterations/2; iter++){
+		//Calculates the error of the guess u and puts it in v. 
+		jacobiSmootherLaplacianDev<<<1,block_size_1d>>>(u_current, b_current, n, v_current);
+
+		//If we do it twice we don't have to copy data and stuff.
+		jacobiSmootherLaplacianDev<<<1,block_size_1d>>>(v_current, b_current, n, u_current);
+	}
 
 }
 
