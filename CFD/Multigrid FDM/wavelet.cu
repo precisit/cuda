@@ -1,6 +1,4 @@
 #include <iostream>
-#include <cuda.h>
-#include <stdlib.h>
 #include "node.cpp"
 
  __device__ bool interpolDot(float p1, float p2, float p3, float p4, float p5, float tol){
