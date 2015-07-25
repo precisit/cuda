@@ -122,16 +122,19 @@ datatype* firstPonterFromGridLevel(const int* nodesPerLevel, const int level, co
 	//backward level is coarsest when = numberOfLevels -1 and finest when = 0
 	int backwardLevel = numberOfLevels - level -1;
 	datatype* ptr = u;
+
+
 	for(int i = 0; i<backwardLevel; i++){
-		if( i = backwardLevel ){
+		/*if( i == backwardLevel ){
+			std::cout<<"ptr: "<<tmp_debugger_counter<<std::endl;
 			return ptr;
-		}
+		}*/
 		ptr += nodesPerLevel[i];
 	}
-	assert(0);
-	return ptr;
-	
+	//assert(0);
+	return ptr;	
 }
+
 __global__ void addVectors(datatype* y, const datatype* x, const int n){
 	// y = y + x
 	// Make sure that they are all of length n
@@ -195,10 +198,10 @@ void multigrid(const int k, datatype* u, datatype* b, datatype* v, const int n ,
 	}
 	else{
 		//Recursive call to itself
-	    multigridCycleLaplacian(k-1, u,b,v, (n-1)/2+1, preSmoothingIterations, solvingSmoothingIterations, postSmoothingIterations, nodesPerLevel, numberOfLevels, u_coarse, b_coarse, v_coarse);
+	    multigrid(k-1, u,b,v, (n-1)/2+1, preSmoothingIterations, solvingSmoothingIterations, postSmoothingIterations, nodesPerLevel, numberOfLevels, u_coarse, b_coarse, v_coarse);
 	}
 
-	interpolate(&tmpGrid, coarseGrid.lengthOfFinerGrid()); //Den här raden e inte klar. FIX!
+	interpolate<<<1, block_size_2d>>>(v_coarse, (n-1)/2+1, v_current, n); //Den här raden e inte klar. FIX!
 
 	//Remove (some of) the error from u_current
 	addVectors<<<1,block_size_1d>>>(u_current,v_current, n);
@@ -214,28 +217,43 @@ void multigrid(const int k, datatype* u, datatype* b, datatype* v, const int n ,
 
 }
 
+
+
 int main(){
 
+	//Both of these assume non-adaptive grid with a 3-by-3 as the
+	//coarsest one.
 	const int numberOfLevels = 3;
-	const int n = 1>>numberOfLevels;
+	const int n = (1<<numberOfLevels) + 1;
+
 
 	//Trust me on this. Im a mathematician. We don't do mistakees.
-	const int numberOfDatapoints = numberOfLevels +1>>(numberOfLevels+1)+2; 
+	//But this doesn't work for adaptive grids.
+	int numberOfDatapoints = 0; int tmp_n = n;
+	for(int i=0; i<numberOfLevels; i++){
+		assert(tmp_n % 2 == 1);
+		assert( tmp_n > 2 );
 
-	datatype *u, *b, *u_new, *v;
+		numberOfDatapoints += tmp_n*tmp_n;
+
+		tmp_n = (tmp_n-1)/2+1;
+	}
+
+	datatype *u, *b, *v;
 
 	//Allocate memory
 	u = (datatype*) malloc(numberOfDatapoints*sizeof(datatype));
-	u_new = (datatype*) malloc(numberOfDatapoints*sizeof(datatype));
 	b = (datatype*) malloc(numberOfDatapoints*sizeof(datatype));
+	v = (datatype*) malloc(numberOfDatapoints*sizeof(datatype));
+
 
 	int *nodesPerLevel;
 	nodesPerLevel = (int*) malloc(numberOfLevels*sizeof(int));
 
-	datatype *u_dev, *b_dev, *u_dev_new;
+	datatype *u_dev, *b_dev, *v_dev;
 	cudaMalloc( (void**) &u_dev, numberOfDatapoints*sizeof(datatype));
-	cudaMalloc( (void**) &u_dev_new, numberOfDatapoints*sizeof(datatype));
 	cudaMalloc( (void**) &b_dev, numberOfDatapoints*sizeof(datatype));
+	cudaMalloc( (void**) &v_dev, numberOfDatapoints*sizeof(datatype));
 
 	int *nodesPerLevel_dev;
 	cudaMalloc( (void**) &nodesPerLevel_dev,numberOfLevels*sizeof(int));
@@ -245,9 +263,6 @@ int main(){
 		u[i] = 0.011111111111111;
 		b[i] = 1.0f;
 	}
-	for(int i=0; i<9; i++){
-		u_new[i] = i;
-	}
 
 	nodesPerLevel[0] = 9*9;
 	nodesPerLevel[1] = 5*5;
@@ -255,38 +270,44 @@ int main(){
 
 	//Copy to GPU
 	cudaMemcpy(u_dev, u, numberOfDatapoints*sizeof(datatype), cudaMemcpyHostToDevice);
-	cudaMemcpy(u_dev_new, u_new, numberOfDatapoints*sizeof(datatype), cudaMemcpyHostToDevice);
 	cudaMemcpy(b_dev, b, numberOfDatapoints*sizeof(datatype), cudaMemcpyHostToDevice);
+	cudaMemcpy(v_dev, v, numberOfDatapoints*sizeof(datatype), cudaMemcpyHostToDevice);
 	cudaMemcpy(nodesPerLevel_dev, nodesPerLevel, numberOfLevels*sizeof(int), cudaMemcpyHostToDevice);
 
-	dim3 block_size(n,n);
 
-	//restrictDtoB<<<1,block_size>>>(u_dev, n, u_dev_new, 3);
-	interpolate<<<1,block_size>>>(u_dev_new, 3, u_dev, 5);
+
+
+	//LET'S DORIS!!
+	for(int multigridIter=0; multigridIter < 30; multigridIter++){
+		multigrid(numberOfLevels-1, u_dev, b_dev, v_dev, n ,30, 15, 30, nodesPerLevel, numberOfLevels,u_dev, b_dev, v_dev);
+	}
+
+
+
+
 
 	//Copy data from GPU
-	cudaMemcpy(u_new, u_dev_new, numberOfDatapoints*sizeof(datatype), cudaMemcpyDeviceToHost);
 	cudaMemcpy(u, u_dev, numberOfDatapoints*sizeof(datatype), cudaMemcpyDeviceToHost);
 	cudaMemcpy(b, b_dev, numberOfDatapoints*sizeof(datatype), cudaMemcpyDeviceToHost);
+	cudaMemcpy(v, v_dev, numberOfDatapoints*sizeof(datatype), cudaMemcpyDeviceToHost);
+
 
 	//Print the result
-	for(int i=0; i<n*n; i++){
+	for(int i=0; i<numberOfDatapoints; i++){
 		std::cout<<u[i]<<std::endl;
 	}
 	std::cout<<std::endl;
-	for(int i=0; i<9; i++){
-		std::cout<<u_new[i]<<std::endl;
-	}
 
 	//Free memory
 	free(b);
 	free(u);
-	free(u_new);
+	free(v);
+
 	free(nodesPerLevel);
 
 	cudaFree(u_dev);
-	cudaFree(u_dev_new);
 	cudaFree(b_dev);
+	cudaFree(v_dev);
 
 	return 0;
 }
