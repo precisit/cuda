@@ -211,8 +211,6 @@ void calculateVortExterior(Grid* grid){
 }
 
 
-
-
 void ALLOFTHESHITTOGETHER(Grid* grid, datatype dt, datatype t_end){
 
 	datatype t=0.0f;
@@ -259,7 +257,7 @@ void ALLOFTHESHITTOGETHER(Grid* grid, datatype dt, datatype t_end){
 
 int main(){
 
-	int n = 17;
+	int n = 9;
 
 	Node* allPointers;
 	allPointers = (Node*) malloc(n*n*sizeof(Node));
@@ -276,7 +274,7 @@ int main(){
 	}*/
 
 
-	ALLOFTHESHITTOGETHER(&finestGrid, 0.004f, 2.0f);
+	//ALLOFTHESHITTOGETHER(&finestGrid, 0.004f, 2.0f);
 
 	/*
 	for(int i=0; i<n*n; i++){
@@ -300,23 +298,23 @@ int main(){
 	*/
 
 
-	/*
+	
 	std::cout<<"hoppsan!"<<std::endl<<std::endl;
 			for(int y=0; y<n*n; y++){
 				for(int x=0; x<n*n; x++){
-					if(finestGrid.getVortTranspDisc(x,y) == 0.0f){
+					if(finestGrid.getLaplacian(x,y) == 0.0f){
 						printf("0         ");
 					}
-					else if(finestGrid.getVortTranspDisc(x,y)>0.0f){
-				 		printf ("%3f  ",finestGrid.getVortTranspDisc(x,y));
+					else if(finestGrid.getLaplacian(x,y)>0.0f){
+				 		printf ("%3f  ",finestGrid.getLaplacian(x,y));
 					}
 					else{
-						printf ("%3f ", finestGrid.getVortTranspDisc(x,y));
+						printf ("%3f ", finestGrid.getLaplacian(x,y));
 					}
 				}
 				std::cout<<std::endl;
 			}
-	*/
+	
 
 	return 0;
 };
