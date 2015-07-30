@@ -25,6 +25,11 @@ public:
 	//Index of Position
 	int x_index, y_index;
 
+	//Global index of position
+	int x_index_global, y_index_global;
+
+	Node *nodeAbove, *nodeBelow, *nodeRight, *nodeLeft;
+
 	#ifdef VORTSTREAM
 	//This is for the vorticity/stream formulation. 
 	//Then the vector will be on the form (vort, stream, stream_y)^T 
@@ -49,6 +54,14 @@ public:
 		this->x_index = 0;
 		this->y_index = 0;
 
+		x_index_global = 0;
+		y_index_global = 0;
+
+		this->nodeRight = NULL;
+		this->nodeBelow = NULL;
+		this->nodeAbove = NULL;
+		this->nodeLeft = NULL;
+
 		#ifdef VORTSTREAM
 			this->vort = 0.0f;
 			this->stream = 0.0f;
@@ -69,6 +82,15 @@ public:
 
 		this->x_index = x_index_in;
 		this->y_index = y_index_in;
+
+		//This should probably be changed? FIX!
+		x_index_global = x_index;
+		y_index_global = y_index;
+
+		this->nodeRight = NULL;
+		this->nodeBelow = NULL;
+		this->nodeAbove = NULL;
+		this->nodeLeft = NULL;
 
 	#ifdef VORTSTREAM
 		this->vort = p_in;
