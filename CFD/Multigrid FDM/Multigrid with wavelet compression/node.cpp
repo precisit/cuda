@@ -51,11 +51,11 @@ public:
 		this->x = 0.0f;
 		this->y = 0.0f;
 
-		this->x_index = 0;
-		this->y_index = 0;
+		this->x_index = -1;
+		this->y_index = -1;
 
-		x_index_global = 0;
-		y_index_global = 0;
+		x_index_global = -1;
+		y_index_global = -1;
 
 		this->nodeRight = NULL;
 		this->nodeBelow = NULL;

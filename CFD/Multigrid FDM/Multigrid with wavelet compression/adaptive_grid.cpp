@@ -14,6 +14,10 @@ public:
     Node** pointsChosenByWavelet; //An array of Node pointers
     int numOfPointsChosen;
 
+    int layerNr;
+    int origo_x;
+    int origo_y;
+
     //adaptiveGrid* finerGrid;
     //adaptiveGrid* coarserGrid;
     datatype h;
@@ -65,6 +69,7 @@ public:
 			}
 		}
 	}
+
 	void resetBoundaryLength(){
 		lenOfBoundary = 0;
 	}
@@ -154,8 +159,25 @@ public:
 		}
 	}
 
+
+		Node * findNode(const int ind_x, const int ind_y){
+
+		for (int i = 0; i < len; ++i)
+		{
+			if(u[i].x_index == ind_x && u[i].y_index == ind_y){
+				return &u[i];
+			}
+		}
+		std::cout<<ind_x<<"; "<<ind_y<<std::endl;
+		//assert(0);
+		return NULL;
+
+	}
+
+
+
 	void interpolateU(AdaptiveGrid fine){
-		for (int i = 0; i < fine.len; ++i)
+		/*for (int i = 0; i < fine.len; ++i)
 		{
 			for (int j = 0; j < this->len; ++j)
 			{
@@ -165,45 +187,42 @@ public:
 					fine.u[i].stream = this->u[j].stream;
 				}
 			}
-		}
+		}*/
 
 		for (int i = 0; i < numOfPointsChosen; ++i)
 		{
+
+			std::cout<<"i: "<<i<<std::endl;
+			Node *middleNode = findNode(pointsChosenByWavelet[i]->x_index, pointsChosenByWavelet[i]->y_index);
 			Node *tmpNodePtr;
 			//Interpolate to the left
-			tmpNodePtr = pointsChosenByWavelet[i]->nodeLeft;
+			tmpNodePtr = middleNode->nodeLeft;
+
+			//assert(tmpNodePtr != NULL);
+			//assert(tmpNodePtr->nodeBelow != NULL);
+			//assert(tmpNodePtr->nodeAbove != NULL);
+
 			tmpNodePtr->stream = (tmpNodePtr->nodeAbove->stream + tmpNodePtr->nodeBelow->stream )/2.0f;
 
 			//to the right
-			tmpNodePtr = pointsChosenByWavelet[i]->nodeRight;
+			tmpNodePtr = middleNode->nodeRight;
 			tmpNodePtr->stream = (tmpNodePtr->nodeAbove->stream + tmpNodePtr->nodeBelow->stream )/2.0f;
 
 			//up
-			tmpNodePtr = pointsChosenByWavelet[i]->nodeAbove;
+			tmpNodePtr = middleNode->nodeAbove;
 			tmpNodePtr->stream = (tmpNodePtr->nodeLeft->stream + tmpNodePtr->nodeRight->stream )/2.0f;
 
 			//down
-			tmpNodePtr = pointsChosenByWavelet[i]->nodeBelow;
+			tmpNodePtr = middleNode->nodeBelow;
 			tmpNodePtr->stream = (tmpNodePtr->nodeLeft->stream + tmpNodePtr->nodeRight->stream )/2.0f;
 
 			//and don't forget the point itself.
-			pointsChosenByWavelet[i]->stream = ( pointsChosenByWavelet[i]->nodeLeft->stream + 
-				pointsChosenByWavelet[i]->nodeRight->stream )/2.0f;
+			middleNode->stream = ( middleNode->nodeLeft->stream + 
+				middleNode->nodeRight->stream )/2.0f;
 		}
 	}
 
-	Node * findNode(const int ind_x, const int ind_y){
 
-		for (int i = 0; i < len; ++i)
-		{
-			if(u[i].x_index == ind_x && u[i].y_index == ind_y){
-				return &u[i];
-			}
-		}
-		assert(0);
-		return NULL;
-
-	}
 
 	void setNeighbours(){
 
@@ -225,14 +244,15 @@ public:
 		}
 	}
 
-	void setupGrid(Node* savedNodes , const int numberOfPoints){
-		free(pointsChosenByWavelet);
+	void setupGrid(Node* savedNodes, const int numberOfPoints){
+		//free(pointsChosenByWavelet);
 		pointsChosenByWavelet = (Node**) malloc(numberOfPoints*sizeof(Node*));
 		this->numOfPointsChosen = numberOfPoints;
 
-		free(u);
+		//free(u);
 		//9 is the maximum. It's probably waaaay too large. OPT!
 		u = (Node*) malloc(9*numberOfPoints*sizeof(Node));
+		len = 9*numberOfPoints;
 
 		int counter = numberOfPoints;
 
@@ -240,21 +260,27 @@ public:
 		for (int i = 0; i < numberOfPoints; ++i)
 		{
 			pointsChosenByWavelet[i] = &savedNodes[i];
-
 			u[i] = savedNodes[i];
-
+			
 			//Left
 			if(isInGrid(savedNodes[i].x_index-1, savedNodes[i].y_index) == false){
-				*u[i].nodeLeft = u[i];
-				u[counter] = *u[i].nodeLeft;
+				//assert(i != 0);
+				Node tmpNode;
+				tmpNode = u[i];
+				u[i].nodeLeft = &tmpNode;
+				u[counter] = tmpNode;
 				u[counter].x_index--;
+				if(i==0){
+					std::cout<<tmpNode.x_index<<std::endl;
+				}
 				//Make sure to do something about the global index here! FIX!
 				counter++;
 			}
-
 			//Right
 			if(isInGrid(savedNodes[i].x_index+1, savedNodes[i].y_index) == false){
-				*u[i].nodeRight = u[i];
+				Node tmpNode;
+				tmpNode = u[i];
+				u[i].nodeRight = &tmpNode;
 				u[counter] = *u[i].nodeRight;
 				u[counter].x_index++;
 				//Make sure to do something about the global index here! FIX!
@@ -263,7 +289,9 @@ public:
 
 			//Up
 			if(isInGrid(savedNodes[i].x_index, savedNodes[i].y_index+1) == false){
-				*u[i].nodeAbove = u[i];
+				Node tmpNode;
+				tmpNode = u[i];
+				u[i].nodeAbove = &tmpNode;
 				u[counter] = *u[i].nodeAbove;
 				u[counter].y_index++;
 				//Make sure to do something about the global index here! FIX!
@@ -271,8 +299,10 @@ public:
 			}
 
 			//down
-			if(isInGrid(savedNodes[i].x_index-1, savedNodes[i].y_index-1) == false){
-				*u[i].nodeBelow = u[i];
+			if(isInGrid(savedNodes[i].x_index, savedNodes[i].y_index-1) == false){
+				Node tmpNode;
+				tmpNode = u[i];
+				u[i].nodeBelow = &tmpNode;
 				u[counter] = *u[i].nodeBelow;
 				u[counter].x_index--;
 				//Make sure to do something about the global index here! FIX!
@@ -282,10 +312,13 @@ public:
 			//Don't forget to create the corners as well.
 			for (int x_mod = -1; x_mod <= 1; x_mod += 2)
 			{
-				for (int y_mod = -1; y_mod <= 1; x_mod += 2)
+				for (int y_mod = -1; y_mod <= 1; y_mod += 2)
 				{
 					if(isInGrid(savedNodes[i].x_index+x_mod, savedNodes[i].y_index+y_mod) == false){
 						u[counter] = u[i];
+						u[counter].x_index += x_mod;
+						u[counter].y_index += y_mod;
+						//std::cout<<counter<<std::endl;
 						counter++;
 					}
 				}
@@ -297,34 +330,94 @@ public:
 		{
 			if(u[i].nodeLeft == NULL)
 			{
-				u[i].nodeLeft = findNode(u[i].x_index-1, u[i].y_index);
+				this->u[i].nodeLeft = findNode(u[i].x_index-1, u[i].y_index);
 			}
 			if (u[i].nodeRight == NULL)
 			{
-				u[i].nodeRight = findNode(u[i].x_index+1, u[i].y_index);
+				this->u[i].nodeRight = findNode(u[i].x_index+1, u[i].y_index);
 			}
 			if(u[i].nodeAbove == NULL)
 			{
-				u[i].nodeAbove = findNode(u[i].x_index, u[i].y_index+1);
+				this->u[i].nodeAbove = findNode(u[i].x_index, u[i].y_index+1);
 			}
 			if (u[i].nodeBelow == NULL)
 			{
-				u[i].nodeBelow = findNode(u[i].x_index, u[i].y_index-1);
+				this->u[i].nodeBelow = findNode(u[i].x_index, u[i].y_index-1);
 			}
 		}
 
+		this->len = counter+1;
+		//for (int i = 0; i < counter; ++i)
+		//{
+		//	assert(u[i].nodeAbove != NULL
+		//}
+
 		std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 
+	}
+
+	AdaptiveGrid(){}
+
+	AdaptiveGrid(const int layerIn , const int origo_x_in, const int origo_y_in, 
+		Node* savedNodesIn , const int numberOfPointsIn){
+
+		this->layerNr = layerIn;
+		this->origo_y = origo_y_in;
+		this->origo_x = origo_x_in;
+		this->setupGrid(savedNodesIn, numberOfPointsIn);
 	}
 
 };
 
 int main(int argc, char const *argv[])
 {
+	Node* fromWavelet;
+	fromWavelet = (Node*) malloc((9+3+2)*sizeof(Node));
 
-	AdaptiveGrid grid;
+	datatype h = 0.125f;
+	for (int x = 0; x < 9; x += 4)
+	{
+		for (int y = 0; y < 9; y += 4)
+		{
+			fromWavelet[x*3+y] = Node(x*h, y*h, x,y, 0.0f,0.0f,0.0f);
+		}
+	}
 
-	AdaptiveGrid coarse;
+	fromWavelet[9]  = Node(0.25,0.25,1,1, 1.0f,0.0f,0.0f);
+	fromWavelet[10] = Node(0.25,0.75,1,3, 1.5f,0.0f,0.0f);
+	fromWavelet[11] = Node(0.75,0.75,3,3, 2.0f,0.0f,0.0f);
+
+	fromWavelet[12] = Node(0.125+0.25,0.5+0.125, 1,1, 0.1f,0.0f,0.0f );
+	fromWavelet[13] = Node(0.125+0.50,0.5+0.125, 3,1, 0.1f,0.0f,0.0f );
+
+	
+
+	AdaptiveGrid fine(3,2,4, &fromWavelet[12], 2);
+	AdaptiveGrid middle(2,0,0, &fromWavelet[9], 3);
+	//AdaptiveGrid coarse(1,0,0, &fromWavelet[0], 9);
+	
+
+
+	middle.interpolateU(fine);
+
+	std::cout<<"Fine: "<<std::endl;
+	for (int i = 0; i < fine.len; ++i)
+	{
+		std::cout<<"x:"<<fine.u[i].x_index<<", y:"<<fine.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
+	}
+
+	std::cout<<"Middle: "<<std::endl;
+	for (int i = 0; i < middle.len; ++i)
+	{
+		std::cout<<"x:"<<middle.u[i].x_index<<", y:"<<middle.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
+	}
+
+	free(fromWavelet);
+
+	/*
+	//AdaptiveGrid grid;
+
+	//AdaptiveGrid coarse;
 	int coarse_n = 9;
 
 	int n = 21;
@@ -383,6 +476,7 @@ int main(int argc, char const *argv[])
 
 	free(coarse.u);
 	free(coarse.b);
+	*/
 
 	return 0;
 }
