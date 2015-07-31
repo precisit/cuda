@@ -1,6 +1,26 @@
 #include <iostream>
 #include "node.cpp"
 
+__device__ bool cornerNode(Node* matrix, int idx, int idy, int row, int colum){
+
+	if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == 0){
+		return true;
+	}
+	else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == 0){
+		return true;
+	}
+	else if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == (colum -1)){
+		return true;
+	}
+	else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == (colum - 1)){
+		return true;
+	}
+	else if (matrix[idx*colum + idy].x_index_global == (row/2) && matrix[idx*colum + idy].y_index_global == (colum/2)){
+		return true;
+	}
+	else{return false;}
+}
+
  __device__ bool interpolDot(float p1, float p2, float p3, float p4, float p5, float tol){
 
  	float p;
@@ -30,7 +50,7 @@ __global__ void waveletkernal(Node* matrix, int row, int colum, float tol, int s
 
 		if(idx < row -step && idy < colum -step){
 		
-			if (idx % 2 == 0 && idy % step == 0){
+			if (idx % step == 0 && idy % step == 0){
 
 				float p1 = matrix[idx*colum + idy].vort;
 				float p2 = matrix[idx*colum + idy + step].vort;
@@ -42,40 +62,51 @@ __global__ void waveletkernal(Node* matrix, int row, int colum, float tol, int s
 				if (interpolDot(p1, p2, p3, p4, p5, tol) == true){
 
 					matrix[(idx + step/2)*colum + idy + step/2].isPicked = true;
-					matrix[(idx + step/2)*colum + idy + step/2].layer = i+1;
+					matrix[(idx + step/2)*colum + idy + step/2].layer = i+1;	
 					
-				}		
+				}
+		
 			}
 					
 		}
+
+
+		if (cornerNode(matrix, idx, idy, row, colum) == true){
+			matrix[idx*colum + idy].isPicked = true;
+			matrix[idx*colum + idy].layer = i+1;
+
+		}		
+
 		step = step*2;
 	}
 }
 
 int main(){
 
-	const int row = 6;
-	const int colum = 6;
+	const int row = 9;
+	const int colum = 9;
 	int step = 2;
-	int layers = 2;	
+	int layers = 3;	
 	int size = row*colum* sizeof(Node);
-	float tol = 0.1;
-		
+	float tol = 0.2;
+			
 	Node* matrix;
 	Node *d_matrix;	
 	matrix = (Node*) calloc(row*colum,sizeof(Node));	
 
 	int x = 0;	
 	int y = 0;
-
+	
 	for(int i=0; i< (row*colum); i++){
 		
-			matrix[i].x_index = x;
-			matrix[i].y_index = y;
+			matrix[i].x_index_global = x;
+			matrix[i].y_index_global = y;
 			matrix[i].x = rand()%5;
 			matrix[i].y = rand()%5;
-			matrix[i].vort = rand()%10;
-			//matrix[i].isPicked = true;
+			
+			if (x*x/row > y){
+			matrix[i].vort = 1;
+			}		
 
 			if (y<colum - 1){
 
@@ -102,6 +133,7 @@ int main(){
 		cudaFree(d_matrix);
 	}
 
+
 	dim3 blockDim(row, colum);
 	dim3 gridDim(1, 1);
 
@@ -111,13 +143,14 @@ int main(){
 	std::cout<<"Run kernel: \n" << cudaGetErrorString(err)<<std::endl;
 
 	if(cudaMemcpy(matrix, d_matrix, size, cudaMemcpyDeviceToHost) != cudaSuccess){
-		//err = cudaMemcpy(d_saveNode, saveNode, colum/step, cudaMemcpyDeviceToHost);
-		//std::cout<<"Copy to CPU: \n" << cudaGetErrorString(err)<<std::endl;
+		err = cudaMemcpy(matrix, d_matrix, size, cudaMemcpyDeviceToHost);
+		std::cout<<"Copy to CPU: \n" << cudaGetErrorString(err)<<std::endl;
 		delete[] matrix;
 		cudaFree(d_matrix);
-		std::cout<< "Can't copy back to CPU 3!"<<std::endl;
+		std::cout<< "Can't copy back to CPU 1!"<<std::endl;
 
 	}
+
 
 	/*for(int i=0; i<row*colum; i++){
 
@@ -158,11 +191,11 @@ int main(){
             printIsPicked = matrix[x + y*colum].isPicked;
             
             if(printIsPicked == 1){
-                printf("true    ");
+                printf("1   ");
             }                       
                     
             else{
-                printf ("false   ");
+                printf ("0   ");
             }
         }
 
@@ -185,7 +218,23 @@ int main(){
 	std::cout<<"countTrue: "<<countTrue<<std::endl;
 
 	Node* ordedNodelist;
-	ordedNodelist = (Node*) calloc(countTrue,sizeof(Node));
+	ordedNodelist = (Node*) calloc(countTrue, sizeof(Node));
+
+	int layerCorner[layers*2];
+
+	for(int i = 0; i<layers*2; i++){
+
+		if(i%2 == 0){
+
+			layerCorner[i] = row;
+		}
+
+		else{
+
+			layerCorner[i] = colum;
+		}
+	}	
+	
     
     int orderPlace = countTrue -1;
 
@@ -201,6 +250,14 @@ int main(){
 
 		    		ordedNodelist[orderPlace] = matrix[i*colum + j];
 
+		    		if(matrix[i*colum + j].x_index_global<layerCorner[(m-1)*2]){
+		    		layerCorner[(m-1)*2] = matrix[i*colum + j].x_index_global;
+		    		}
+
+		    		if(matrix[i*colum + j].y_index_global<layerCorner[(m-1)*2 + 1]){
+		    		layerCorner[(m-1)*2 + 1] = matrix[i*colum + j].y_index_global;
+		    		}
+
 		    		orderPlace --;
 		    	}
 		    }
@@ -209,11 +266,19 @@ int main(){
 
 	for(int i=0; i<countTrue; i++){
 
-		std::cout<<ordedNodelist[i].x_index<<std::endl<< ordedNodelist[i].y_index<<std::endl/*<< ordedNodelist[i].x<<std::endl<< ordedNodelist[i].y<<std::endl<< ordedNodelist[i].vort<<std::endl<<ordedNodelist[i].isPicked*/<<std::endl;
+		std::cout<<ordedNodelist[i].x_index_global<< ordedNodelist[i].y_index_global<<ordedNodelist[i].layer<<std::endl<<std::endl;
 	}
 
+	for(int i = 0; i<layers*2; i++){
+
+		std::cout<<layerCorner[i]<<std::endl;
+	}
 
 	cudaFree(d_matrix);
 	delete[] matrix;	
 	return 0;
 }
+
+
+
+
