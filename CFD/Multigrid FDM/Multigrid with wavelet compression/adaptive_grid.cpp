@@ -7,7 +7,7 @@ public:
     int len;
     Node* b;
 
-    datatype* boundaryVals;
+    Node* boundaryVals;
     int* boundaryIndex;
     int lenOfBoundary;
 
@@ -15,15 +15,16 @@ public:
     int numOfPointsChosen;
 
     int layerNr;
+    int numOfLayers;
     int origo_x;
     int origo_y;
 
-    //adaptiveGrid* finerGrid;
-    //adaptiveGrid* coarserGrid;
+    AdaptiveGrid* finerGrid = NULL;
+    AdaptiveGrid* coarserGrid = NULL;
     datatype h;
 
 	bool isInBoundary(const int x, const int y){
-
+		//std::cout<<"hello there!: "<<lenOfBoundary<<std::endl;
 		for (int i = 0; i < lenOfBoundary; ++i)
 		{
 			if(boundaryIndex[2*i]==x && boundaryIndex[2*i+1]==y){
@@ -44,10 +45,23 @@ public:
 		return b[i].stream;
 	}
 
+	Node getFromBoundary(const int x, const int y){
+		std::cout<<"hi!"<<std::endl;
+		for (int i = 0; i < lenOfBoundary; ++i)
+		{
+			if(boundaryIndex[2*i] == x && boundaryIndex[2*i+1] == y){
+				return boundaryVals[i];
+			}
+		}
+		std::cout<<x<<" "<<y<<std::endl;
+		assert(0);
+		return boundaryVals[0];
+	}
+
 	datatype getLaplacianStream(const int index1, const int index2){
 
-		assert(index1>= 0 && index1 < len);
-		assert(index2>= 0);
+		assert(index1 >= 0 && index1 < len);
+		assert(index2 >= 0);
 		assert(index2 < len);
 
 		int dist = abs(u[index1].x_index - u[index2].x_index) +abs(u[index1].y_index - u[index2].y_index);
@@ -61,7 +75,7 @@ public:
 		 	}
 			else{
 			 	if(isInBoundary(u[index2].x_index, u[index2].y_index)){
-			 		return 0.0f;
+			 		return getFromBoundary(u[index2].x_index, u[index2].y_index).stream/h;
 			 	}
 			 	else{
 			 		return 1.0f/(h*h);
@@ -81,38 +95,49 @@ public:
 				return true;
 			}
 		}
+		//std::cout<<x<<" ; "<<y<<std::endl;
 		return false;
 	}
 
 	void setBoundaryLength(){
-
+		//std::cout<<"                    "<<std::endl;
 		int counter = 0;
 		int x, y;
 		for (int i = 0; i < len; ++i)
 		{
-			for (int i = -1; i < 2; i+=2)
-			{
-				for (int j = -1; j < 2; j+=2)
-				{
-					x = u[i].x_index + i;
-					y = u[i].y_index + j;
+			x = u[i].x_index + 1;
+			y = u[i].y_index;
 
-					if( !(x-1 < 0) && !(y-1 < 0)){
-						if(isInGrid(x,y)==false){
-							++counter;
-						}
-					}
-				}
+			if(isInGrid(x,y)==false){
+				++counter;
+			}
+			x = u[i].x_index - 1;
+			y = u[i].y_index;
+
+			if(isInGrid(x,y)==false){
+				++counter;
+			}
+			x = u[i].x_index;
+			y = u[i].y_index + 1;
+
+			if(isInGrid(x,y)==false){
+				++counter;
+			}
+			x = u[i].x_index;
+			y = u[i].y_index - 1;
+
+			if(isInGrid(x,y)==false){
+				++counter;
 			}
 		}
 		lenOfBoundary = counter;
 	}
 
-	void setB(const int i, const datatype val){
-		assert(i>=0 && i<len);
-
-		b[i].stream = val;
-	}
+	//void setB(const int i, const datatype val){
+	//	assert(i>=0 && i<len);
+//
+//		b[i].stream = val;
+//	}
 
 
 	void setU(const datatype val, const int i){
@@ -160,7 +185,7 @@ public:
 	}
 
 
-		Node * findNode(const int ind_x, const int ind_y){
+	Node * findNode(const int ind_x, const int ind_y){
 
 		for (int i = 0; i < len; ++i)
 		{
@@ -168,7 +193,7 @@ public:
 				return &u[i];
 			}
 		}
-		std::cout<<ind_x<<"; "<<ind_y<<std::endl;
+		//std::cout<<ind_x<<"; "<<ind_y<<std::endl;
 		//assert(0);
 		return NULL;
 
@@ -192,7 +217,7 @@ public:
 		for (int i = 0; i < numOfPointsChosen; ++i)
 		{
 
-			std::cout<<"i: "<<i<<std::endl;
+			//std::cout<<"i: "<<i<<std::endl;
 			Node *middleNode = findNode(pointsChosenByWavelet[i]->x_index, pointsChosenByWavelet[i]->y_index);
 			Node *tmpNodePtr;
 			//Interpolate to the left
@@ -244,6 +269,17 @@ public:
 		}
 	}
 
+	void local2global(const int* x_loc, const int* y_loc, int* x_glo, int* y_glo ){
+
+		assert( this->layerNr > 0 );
+		assert( this->layerNr <= this->numOfLayers );
+
+		*y_glo = *y_loc*(1<<(numOfLayers-layerNr))+this->origo_y;
+		*x_glo = *x_loc*(1<<(numOfLayers-layerNr))+this->origo_x;
+
+	}
+
+
 	void setupGrid(Node* savedNodes, const int numberOfPoints){
 		//free(pointsChosenByWavelet);
 		pointsChosenByWavelet = (Node**) malloc(numberOfPoints*sizeof(Node*));
@@ -270,9 +306,7 @@ public:
 				u[i].nodeLeft = &tmpNode;
 				u[counter] = tmpNode;
 				u[counter].x_index--;
-				if(i==0){
-					std::cout<<tmpNode.x_index<<std::endl;
-				}
+				
 				//Make sure to do something about the global index here! FIX!
 				counter++;
 			}
@@ -304,7 +338,7 @@ public:
 				tmpNode = u[i];
 				u[i].nodeBelow = &tmpNode;
 				u[counter] = *u[i].nodeBelow;
-				u[counter].x_index--;
+				u[counter].y_index--;
 				//Make sure to do something about the global index here! FIX!
 				counter++;
 			}
@@ -326,7 +360,7 @@ public:
 		}
 
 		//Make sure everyone finds thier neigbours.
-		for (int i = 0; i < counter; ++i)
+		for (int i = 0; i < counter+1; ++i)
 		{
 			if(u[i].nodeLeft == NULL)
 			{
@@ -347,27 +381,270 @@ public:
 		}
 
 		this->len = counter+1;
-		//for (int i = 0; i < counter; ++i)
-		//{
-		//	assert(u[i].nodeAbove != NULL
-		//}
+		int *x_loc, *y_loc, *y_glo, *x_glo;
+		x_loc =(int*) malloc(sizeof(int));
+		y_loc =(int*) malloc(sizeof(int));
+		x_glo =(int*) malloc(sizeof(int));
+		y_glo =(int*) malloc(sizeof(int));
+		for (int i = 0; i < len; ++i)
+		{
+			std::cout<<i<<std::endl;
+			*x_loc = this->u[i].x_index;
+			*y_loc = u[i].y_index;
 
-		std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
+			local2global(x_loc, y_loc, x_glo, y_glo);
+
+			u[i].x_index_global = *x_glo;
+			u[i].y_index_global = *y_glo;
+		}
+		free(x_loc);
+		free(y_loc);
+		free(x_glo);
+		free(y_glo);
+		//std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 
 	}
 
 	AdaptiveGrid(){}
 
-	AdaptiveGrid(const int layerIn , const int origo_x_in, const int origo_y_in, 
-		Node* savedNodesIn , const int numberOfPointsIn){
+	AdaptiveGrid(const int layerIn ,const int numLayersIn, const int origo_x_in, const int origo_y_in, 
+		Node* savedNodesIn , const int numberOfPointsIn, const datatype h_in){
+
+		this->h = h_in;
 
 		this->layerNr = layerIn;
+		this->numOfLayers = numLayersIn;
 		this->origo_y = origo_y_in;
 		this->origo_x = origo_x_in;
 		this->setupGrid(savedNodesIn, numberOfPointsIn);
+		boundaryIndex = (int*) malloc(1);
+		boundaryVals = (Node*) malloc(1);
+		b = (Node*) malloc(1);
+	}
+
+	Node interpolateGhostPointFromGlobal(int x_glo, int y_glo){
+		std::cout<<"GLLLLLLLLLLLLLLLLLLLLLLOBAL!!!!!"<<std::endl;
+		std::cout<<"Llllllllllllllllllayer: "<<this->layerNr<<std::endl;
+		assert(this->layerNr != 1);
+
+		assert( this->coarserGrid != NULL );
+		assert( this->coarserGrid->numOfLayers == this->numOfLayers );
+
+		Node outNode;
+
+		//int x_loc_mod = x_glo / (1<<(numOfLayers-coarserGrid->layerNr));
+		//int y_loc_mod = y_glo / (1<<(numOfLayers-coarserGrid->layerNr));
+
+		//std::cout<<"x_loc_mod: "<<x_loc_mod<<" y_loc_mod: "<<y_loc_mod<<std::endl;
+
+		if(x_glo % (1<<(numOfLayers-coarserGrid->layerNr)) == 0){
+			int y1 = y_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int y2 = y_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			std::cout<<"x"<<std::endl;
+			outNode =  (coarserGrid->findNodeFromGlobalIndex(x_glo,y1)+coarserGrid->findNodeFromGlobalIndex(x_glo,y2))/2.0f;
+		}
+		else if(y_glo % (1<<(numOfLayers-coarserGrid->layerNr)) == 0){
+			int x1 = x_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int x2 = x_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			std::cout<<"y"<<std::endl;
+			outNode = (coarserGrid->findNodeFromGlobalIndex(x1,y_glo)+coarserGrid->findNodeFromGlobalIndex(x2,y_glo))/2.0f;
+		}
+		else{
+			int x1 = x_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int x2 = x_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int y1 = y_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int y2 = y_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			std::cout<<"xy"<<std::endl;
+			//std::cout<<x_loc_mod<<" "<<y_loc_mod<<std::endl;
+			std::cout<<x_glo<<" "<<y_glo<<std::endl;
+			std::cout<<(1<<(numOfLayers-coarserGrid->layerNr))<<std::endl;
+			std::cout<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<std::endl;
+			outNode = (coarserGrid->findNodeFromGlobalIndex(x1,y1)+coarserGrid->findNodeFromGlobalIndex(x1,y2)+coarserGrid->findNodeFromGlobalIndex(x2,y2)+coarserGrid->findNodeFromGlobalIndex(x2,y1))/4.0f;
+		}
+
+		return outNode;
+	}
+
+	Node findNodeFromGlobalIndex(const int x, const int y){
+		for (int i = 0; i < len; ++i)
+		{
+			if(u[i].x_index_global == x && u[i].y_index_global == y){
+				return u[i];
+			}
+		}
+		std::cout<<"x: "<<x<<" ; y: "<<y<<std::endl;
+		//The node doesn't exist. Oh, well.
+		return this->interpolateGhostPointFromGlobal(x, y);
+	}
+
+	Node interpolateGhostPoint(int x_loc, int y_loc){
+		assert( this->coarserGrid != NULL );
+		assert( this->coarserGrid->numOfLayers == this->numOfLayers );
+
+		int *x_glo, *y_glo;
+		x_glo =(int*) malloc(sizeof(int));
+		y_glo =(int*) malloc(sizeof(int));
+		local2global(&x_loc, &y_loc, x_glo, y_glo);
+
+		Node outNode;
+
+		if(x_loc % 2 == 0){
+			int y1 = *y_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int y2 = *y_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			std::cout<<"x"<<std::endl;
+			outNode =  (coarserGrid->findNodeFromGlobalIndex(*x_glo,y1)+coarserGrid->findNodeFromGlobalIndex(*x_glo,y2))/2.0f;
+		}
+		else if(y_loc %2 == 0){
+			int x1 = *x_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int x2 = *x_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			std::cout<<"y"<<std::endl;
+			outNode = (coarserGrid->findNodeFromGlobalIndex(x1,*y_glo)+coarserGrid->findNodeFromGlobalIndex(x2,*y_glo))/2.0f;
+		}
+		else{
+			int x1 = *x_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int x2 = *x_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int y1 = *y_glo+(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			int y2 = *y_glo-(1<<(numOfLayers-coarserGrid->layerNr))/2;
+			std::cout<<"xy"<<std::endl;
+			std::cout<<x_loc<<" "<<y_loc<<std::endl;
+			std::cout<<*x_glo<<" "<<*y_glo<<std::endl;
+			std::cout<<(1<<(numOfLayers-coarserGrid->layerNr))<<std::endl;
+			std::cout<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<std::endl;
+			outNode = (coarserGrid->findNodeFromGlobalIndex(x1,y1)+coarserGrid->findNodeFromGlobalIndex(x1,y2)+coarserGrid->findNodeFromGlobalIndex(x2,y2)+coarserGrid->findNodeFromGlobalIndex(x2,y1))/4.0f;
+		}
+
+		free(x_glo);
+		free(y_glo);
+
+		return outNode;
+
+	}
+
+	void setBoundary(){
+		int counter = 0;
+		int x, y;
+		boundaryIndex = (int*) malloc(2*lenOfBoundary*sizeof(int));
+		boundaryVals = (Node*) malloc(lenOfBoundary*sizeof(Node));
+
+		for (int i = 0; i < len; ++i)
+		{
+			x = u[i].x_index + 1;
+			y = u[i].y_index;
+
+			if(isInGrid(x,y)==false){
+				boundaryIndex[counter] = x;
+				counter++;
+				boundaryIndex[counter] = y;
+				counter++;
+			}
+			x = u[i].x_index - 1;
+			y = u[i].y_index;
+
+			if(isInGrid(x,y)==false){
+				boundaryIndex[counter] = x;
+				counter++;
+				boundaryIndex[counter] = y;
+				counter++;
+			}
+			x = u[i].x_index;
+			y = u[i].y_index + 1;
+
+			if(isInGrid(x,y)==false){
+				boundaryIndex[counter] = x;
+				counter++;
+				boundaryIndex[counter] = y;
+				counter++;
+			}
+			x = u[i].x_index;
+			y = u[i].y_index - 1;
+
+			if(isInGrid(x,y)==false){
+				boundaryIndex[counter] = x;
+				counter++;
+				boundaryIndex[counter] = y;
+				counter++;
+			}
+		}
+
+		for (int i = 0; i < lenOfBoundary; ++i)
+		{
+			boundaryVals[i] = interpolateGhostPoint(boundaryIndex[2*i], boundaryIndex[2*i+1]);
+		}
+
+
+	}
+
+	void updateBFromBoundary(){
+		Node boundary;
+		for (int i = 0; i < len; ++i)
+		{
+			if (u[i].nodeAbove == NULL)
+			{
+				std::cout<<"above"<<std::endl;
+				boundary = getFromBoundary(u[i].x_index, u[i].y_index + 1);
+				b[i] = b[i] + boundary/(-h);
+			}
+			if (u[i].nodeBelow == NULL)
+			{
+				std::cout<<"below"<<std::endl;
+				boundary = getFromBoundary(u[i].x_index, u[i].y_index - 1);
+				b[i] = b[i] + boundary/(-h);
+			}
+			if (u[i].nodeRight == NULL)
+			{
+				std::cout<<"right"<<std::endl;
+				boundary = getFromBoundary(u[i].x_index +1, u[i].y_index);
+				b[i] = b[i] + boundary/(-h);
+			}
+			if (u[i].nodeLeft == NULL)
+			{
+				std::cout<<"left"<<std::endl;
+				boundary = getFromBoundary(u[i].x_index -1 , u[i].y_index);
+				b[i] = b[i] + boundary/(-h);
+			}
+		}
+	}
+
+	void updateBoundary(){
+		this->resetBoundaryLength();
+		this->setBoundaryLength();
+		free(boundaryIndex);
+		free(boundaryVals);
+		free(b);
+		this->setBoundary();
+		b = (Node*) calloc(len,sizeof(Node));
+		updateBFromBoundary();
 	}
 
 };
+
+
+
+
+void multigrid(int k, AdaptiveGrid grid, int pre, int sol, int post){
+	for (int i = 0; i < pre; ++i)
+	{
+
+		for (int j = 0; j < grid.len; ++j)
+		{
+			std::cout<<"u[i]: "<<grid.u[j].x_index<<" ; "<<grid.u[j].y_index<<" , "<<grid.u[j].stream<<std::endl;
+		}
+		std::cout<<std::endl;
+
+		grid.jacobiSmootherLaplacianStream();
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 
 int main(int argc, char const *argv[])
 {
@@ -375,29 +652,57 @@ int main(int argc, char const *argv[])
 	fromWavelet = (Node*) malloc((9+3+2)*sizeof(Node));
 
 	datatype h = 0.125f;
-	for (int x = 0; x < 9; x += 4)
+	for (int x = 0; x < 3; x += 1)
 	{
-		for (int y = 0; y < 9; y += 4)
+		for (int y = 0; y < 3; y += 1)
 		{
 			fromWavelet[x*3+y] = Node(x*h, y*h, x,y, 0.0f,0.0f,0.0f);
 		}
 	}
 
-	fromWavelet[9]  = Node(0.25,0.25,1,1, 1.0f,0.0f,0.0f);
-	fromWavelet[10] = Node(0.25,0.75,1,3, 1.5f,0.0f,0.0f);
-	fromWavelet[11] = Node(0.75,0.75,3,3, 2.0f,0.0f,0.0f);
+	fromWavelet[9]  = Node(0.25,0.25,1,1, 1.0f,0.1f,0.0f);
+	fromWavelet[10] = Node(0.25,0.75,1,3, 1.5f,0.2f,0.0f);
+	fromWavelet[11] = Node(0.75,0.75,3,3, 2.0f,0.3f,0.0f);
 
-	fromWavelet[12] = Node(0.125+0.25,0.5+0.125, 1,1, 0.1f,0.0f,0.0f );
-	fromWavelet[13] = Node(0.125+0.50,0.5+0.125, 3,1, 0.1f,0.0f,0.0f );
+	fromWavelet[12] = Node(0.125+0.25,0.5+0.125, 1,1, 0.1f,0.4f,0.0f);
+	fromWavelet[13] = Node(0.125+0.50,0.5+0.125, 3,1, 0.1f,0.5f,0.0f);
 
 	
 
-	AdaptiveGrid fine(3,2,4, &fromWavelet[12], 2);
-	AdaptiveGrid middle(2,0,0, &fromWavelet[9], 3);
-	//AdaptiveGrid coarse(1,0,0, &fromWavelet[0], 9);
+	AdaptiveGrid fine(3,3,2,4, &fromWavelet[12], 2, 4*h);
+	AdaptiveGrid middle(2,3,0,0, &fromWavelet[9], 3, 2*h);
+	AdaptiveGrid coarse(1,3,0,0, &fromWavelet[0], 9, h);
+
+	fine.coarserGrid = &middle;
+	middle.coarserGrid = &coarse;
+	//middle.setBoundaryLength();
+	//std::cout<<middle.lenOfBoundary<<std::endl;
+
+	std::cout<<std::endl;
+	for (int i = 0; i < coarse.len; ++i)
+	{
+		//std::cout<<std::endl;
+		//std::cout<<"u[i]: "<<coarse.u[i].x_index<<" ; "<<coarse.u[i].y_index<<std::endl;
+		//std::cout<<"u[i]: "<<coarse.u[i].x_index_global<<" ; "<<coarse.u[i].y_index_global<<std::endl;
+		//std::cout<<std::endl;
+	}
 	
-
-
+	fine.updateBoundary();
+	middle.updateBoundary();
+	//fine.setBoundaryLength();
+	//std::cout<<fine.lenOfBoundary<<std::endl;
+	for (int i = 0; i < fine.len; ++i)
+	{
+		std::cout<<"u[i]: "<<fine.u[i].x_index<<" ; "<<fine.u[i].y_index<<" , "<<fine.u[i].stream<<std::endl;
+	}
+	multigrid(0,fine, 12,6,2);
+	//assert(0);
+	for (int i = 0; i < fine.len; ++i)
+	{
+		std::cout<<"u[i]: "<<fine.u[i].x_index<<" ; "<<fine.u[i].y_index<<" , "<<fine.u[i].stream<<std::endl;
+	}
+	std::cout<<coarse.len<<std::endl;
+	/*
 	middle.interpolateU(fine);
 
 	std::cout<<"Fine: "<<std::endl;
@@ -411,6 +716,7 @@ int main(int argc, char const *argv[])
 	{
 		std::cout<<"x:"<<middle.u[i].x_index<<", y:"<<middle.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
 	}
+	*/
 
 	free(fromWavelet);
 
