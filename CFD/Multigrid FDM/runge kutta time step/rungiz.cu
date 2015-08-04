@@ -2,10 +2,6 @@
 #define Re 5.0f
 
 #include <iostream>
-<<<<<<< HEAD
-#include <assert.h>
-=======
->>>>>>> multigrid
 
 void calculateVortInterior(const datatype* stream, datatype* vort_out, const datatype* vort, const int n){
 
@@ -20,11 +16,8 @@ void calculateVortInterior(const datatype* stream, datatype* vort_out, const dat
 	}
 }
 
-<<<<<<< HEAD
-=======
 
 
->>>>>>> multigrid
 void calculateVortExterior(const datatype* stream, datatype* vort_out, const int n){
 
 	int x,y;
@@ -49,30 +42,7 @@ void calculateVortExterior(const datatype* stream, datatype* vort_out, const int
 
 }
 
-<<<<<<< HEAD
-#ifdef NOT_DEBUGGING
-void sofias_bajs_funk(const datatype* stream, datatype *f,const datatype* y_vector,const int n_sqrt){
-	/*
-		Input is poop on the form of a vector.
-		Output is void. In the form om poop.
-	*/
 
-	calculateVortInterior(stream, f, y_vector, n_sqrt);
-	calculateVortExterior(stream, f, n_sqrt);
-}
-#else
-void sofias_bajs_funk(const datatype* stream, datatype *f,const datatype* y_vector,const int n_sqrt){
-	assert(n_sqrt==2);
-	//Solves y_t = 7y, x_t = x+y
-
-	f[0] = y_vector[0] + y_vector[1];
-	f[1] = 7.0f*y_vector[1];
-}
-
-#endif
-=======
-
->>>>>>> multigrid
 
 
 
@@ -88,19 +58,8 @@ void RK4_step(const datatype dt, datatype* y_vector, const datatype* stream, con
 	k3 = (datatype*) malloc(n*sizeof(datatype));
 	k4 = (datatype*) malloc(n*sizeof(datatype));
 
-<<<<<<< HEAD
-	sofias_bajs_funk(stream, f, y_vector, n_sqrt);
-
-
-	std::cout<<"y: ";
-	for(int i= 0; i<n; i++){
-		std::cout<<y_vector[i]<<std::endl;
-	}
-
-=======
 	calculateVortInterior(stream, f, y_vector, n_sqrt);
 	calculateVortExterior(stream, y_vector, n_sqrt);
->>>>>>> multigrid
 
 	std::cout<<"f: ";
 	for(int i= 0; i<n; i++){
@@ -115,12 +74,8 @@ void RK4_step(const datatype dt, datatype* y_vector, const datatype* stream, con
     for (i=0; i < n; i++){
     	y[i] = y_vector[i] + 0.5 * k1[i];
     }
-<<<<<<< HEAD
-    sofias_bajs_funk(stream, f, y_vector, n_sqrt);
-=======
     calculateVortInterior(stream, f, y_vector, n_sqrt);
     calculateVortExterior(stream, y_vector, n_sqrt);
->>>>>>> multigrid
     
     for (i = 0; i < n; i++){
     	k2[i] = dt * f[i];
@@ -129,12 +84,8 @@ void RK4_step(const datatype dt, datatype* y_vector, const datatype* stream, con
     for (i=0; i < n; i++){
     	y[i] = y_vector[i] + 0.5 * k2[i];
     }
-<<<<<<< HEAD
-    sofias_bajs_funk(stream, f, y_vector, n_sqrt);
-=======
     calculateVortInterior(stream, f, y_vector, n_sqrt);
     calculateVortExterior(stream, y_vector, n_sqrt);
->>>>>>> multigrid
     
     for (i = 0; i < n; i++)
     k3[i] = dt * f[i];
@@ -142,13 +93,9 @@ void RK4_step(const datatype dt, datatype* y_vector, const datatype* stream, con
     for (i=0; i < n; i++){
    		y[i] = y_vector[i] + k3[i];
    	}
-<<<<<<< HEAD
-    sofias_bajs_funk(stream, f, y_vector, n_sqrt);
-=======
     calculateVortInterior(stream, f, y_vector, n_sqrt);
     calculateVortExterior(stream, y_vector, n_sqrt);
     
->>>>>>> multigrid
     for (i = 0; i < n; i++){
     	k4[i] = dt * f[i];
     }
@@ -158,20 +105,9 @@ void RK4_step(const datatype dt, datatype* y_vector, const datatype* stream, con
     }
 
 
-<<<<<<< HEAD
-    std::cout<<"k: ";
-    std::cout<<k1[1]<<", "<<k2[1]<<", "<<k3[1]<<", "<<k4[1]<<std::endl;
-	std::cout<<std::endl;
-
-
-    std::cout<<"y_vector: ";
-    for(int i= 0; i<n; i++){
-		std::cout<<y_vector[i]<<std::endl;
-=======
     std::cout<<"y_vector: ";
     for(int i= 0; i<n; i++){
 		//std::cout<<y_vector[i]<<std::endl;
->>>>>>> multigrid
 	}
 	std::cout<<std::endl;
 

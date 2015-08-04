@@ -1,2 +1,2 @@
 all:
-	nvcc -lcublas -arch=sm_50 grid.cpp -o gridTest
+	nvcc -lcublas -arch=sm_50 grid.cpp multigrid.cpp -o multigridTest
