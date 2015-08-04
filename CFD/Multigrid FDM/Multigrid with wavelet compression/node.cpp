@@ -124,18 +124,18 @@ public:
 	//Addition operator
 	Node operator+(const Node& rhs){
 		#ifdef VORTSTREAM
-			return Node(this->x+rhs.x, this->y+rhs.y, this->x_index+rhs.x_index, this->y_index+rhs.y_index, this->vort+rhs.vort, this->stream+rhs.stream, this->stream_y+rhs.stream_y);
+			return Node(this->x, this->y, this->x_index, this->y_index, this->vort+rhs.vort, this->stream+rhs.stream, this->stream_y+rhs.stream_y);
 		#else
-			return Node(this->x+rhs.x, this->y+rhs.y, this->x_index+rhs.x_index, this->y_index+rhs.y_index, this->p+rhs.p, this->v_x+rhs.v_x, this->v_y+rhs.v_y);
+			return Node(this->x, this->y, this->x_index, this->y_index, this->p+rhs.p, this->v_x+rhs.v_x, this->v_y+rhs.v_y);
 		#endif
 	};
 
 	//Division with a number
 	Node operator/(const datatype& rhs){
 		#ifdef VORTSTREAM
-			return Node(this->x/rhs, this->y/rhs, this->x_index/rhs, this->y_index/rhs, this->vort/rhs, this->stream/rhs, this->stream_y/rhs);
+			return Node(this->x, this->y, this->x_index, this->y_index, this->vort/rhs, this->stream/rhs, this->stream_y/rhs);
 		#else
-			return Node(this->x/rhs, this->y/rhs, this->x_index/rhs, this->y_index/rhs, this->p/rhs, this->v_x/rhs, this->v_y/rhs);
+			return Node(this->x, this->y, this->x_index, this->y_index, this->p/rhs, this->v_x/rhs, this->v_y/rhs);
 		#endif
 	};
 
