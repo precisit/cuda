@@ -1,5 +1,8 @@
 #include <assert.h>
 #include "node.cpp"
+
+typedef datatype (*func_t)(datatype, datatype);
+
 class AdaptiveGrid{
 public:
 
@@ -7,6 +10,7 @@ public:
     int len;
     Node* b;
     Node* d;
+    Node* w;
 
     Node* boundaryVals;
     int* boundaryIndex;
@@ -182,15 +186,15 @@ public:
 			}
 		}
 
-	void restrictU(AdaptiveGrid coarse){
-		for (int i = 0; i < coarse.len; ++i)
+	void restrictUtoU(AdaptiveGrid* coarse){
+		for (int i = 0; i < coarse->len; ++i)
 		{
 			for (int j = 0; j < this->len; ++j)
 			{
-				if( this->u[j].x_index_global == coarse.u[i].x_index_global 
-					&& this->u[j].y_index_global == coarse.u[i].y_index_global )
+				if( this->u[j].x_index_global == coarse->u[i].x_index_global 
+					&& this->u[j].y_index_global == coarse->u[i].y_index_global )
 				{
-					coarse.u[i].stream = this->u[j].stream;
+					coarse->u[i].stream = this->u[j].stream;
 				}
 			}
 		}
@@ -206,6 +210,20 @@ public:
 					&& this->d[j].y_index_global == coarse->b[i].y_index_global )
 				{
 					coarse->b[i].stream = this->d[j].stream;
+				}
+			}
+		}
+	}
+
+	void restrictDtoD(AdaptiveGrid* coarse){
+		for (int i = 0; i < coarse->len; ++i)
+		{
+			for (int j = 0; j < this->len; ++j)
+			{
+				if( this->d[j].x_index_global == coarse->d[i].x_index_global 
+					&& this->d[j].y_index_global == coarse->d[i].y_index_global )
+				{
+					coarse->d[i].stream = this->d[j].stream;
 				}
 			}
 		}
@@ -240,7 +258,8 @@ public:
 	}
 
 	void interpolateU(AdaptiveGrid *fine){
-		for (int i = 0; i < fine->len; ++i)
+		//This doesn't work. FIX!
+		/*for (int i = 0; i < fine->len; ++i)
 		{
 			for (int j = 0; j < this->len; ++j)
 			{
@@ -250,39 +269,41 @@ public:
 					fine->u[i].stream = this->u[j].stream;
 				}
 			}
-		}
+		}*/
 
-		for (int i = 0; i < numOfPointsChosen; ++i)
-		{
+			fine->findNeighboursU();
+			for (int i = 0; i < fine->numOfPointsChosen; ++i)
+			{
 
-			//std::cout<<"i: "<<i<<std::endl;
-			Node *middleNode = findNode(pointsChosenByWavelet[i]->x_index, pointsChosenByWavelet[i]->y_index);
-			Node *tmpNodePtr;
-			//Interpolate to the left
-			tmpNodePtr = middleNode->nodeLeft;
+				//std::cout<<"i: "<<i<<std::endl;
+				Node *middleNode = fine->findNode(fine->u[i].x_index, fine->u[i].y_index);
+				Node *tmpNodePtr;
+				//Interpolate to the left
+				tmpNodePtr = middleNode->nodeLeft;
 
-			//assert(tmpNodePtr != NULL);
-			//assert(tmpNodePtr->nodeBelow != NULL);
-			//assert(tmpNodePtr->nodeAbove != NULL);
+				//assert(tmpNodePtr != NULL);
+				//assert(tmpNodePtr->nodeBelow != NULL);
+				//assert(tmpNodePtr->nodeAbove != NULL);
 
-			tmpNodePtr->stream = (tmpNodePtr->nodeAbove->stream + tmpNodePtr->nodeBelow->stream )/2.0f;
+				tmpNodePtr->stream = (tmpNodePtr->nodeAbove->stream + tmpNodePtr->nodeBelow->stream )/2.0f;
 
-			//to the right
-			tmpNodePtr = middleNode->nodeRight;
-			tmpNodePtr->stream = (tmpNodePtr->nodeAbove->stream + tmpNodePtr->nodeBelow->stream )/2.0f;
+				//to the right
+				tmpNodePtr = middleNode->nodeRight;
+				tmpNodePtr->stream = (tmpNodePtr->nodeAbove->stream + tmpNodePtr->nodeBelow->stream )/2.0f;
 
-			//up
-			tmpNodePtr = middleNode->nodeAbove;
-			tmpNodePtr->stream = (tmpNodePtr->nodeLeft->stream + tmpNodePtr->nodeRight->stream )/2.0f;
+				//up
+				tmpNodePtr = middleNode->nodeAbove;
+				tmpNodePtr->stream = (tmpNodePtr->nodeLeft->stream + tmpNodePtr->nodeRight->stream )/2.0f;
 
-			//down
-			tmpNodePtr = middleNode->nodeBelow;
-			tmpNodePtr->stream = (tmpNodePtr->nodeLeft->stream + tmpNodePtr->nodeRight->stream )/2.0f;
+				//down
+				tmpNodePtr = middleNode->nodeBelow;
+				tmpNodePtr->stream = (tmpNodePtr->nodeLeft->stream + tmpNodePtr->nodeRight->stream )/2.0f;
 
-			//and don't forget the point itself.
-			middleNode->stream = ( middleNode->nodeLeft->stream + 
-				middleNode->nodeRight->stream )/2.0f;
-		}
+				//and don't forget the point itself.
+				middleNode->stream = ( middleNode->nodeLeft->stream + 
+					middleNode->nodeRight->stream )/2.0f;
+			}
+		
 	}
 
 
@@ -343,7 +364,18 @@ public:
 			this->d[i].nodeLeft = findNodeD(d[i].x_index-1, d[i].y_index);
 			this->d[i].nodeRight = findNodeD(d[i].x_index+1, d[i].y_index);
 			this->d[i].nodeAbove = findNodeD(d[i].x_index, d[i].y_index+1);
-			this->d[i].nodeBelow = findNode(d[i].x_index, d[i].y_index-1);
+			this->d[i].nodeBelow = findNodeD(d[i].x_index, d[i].y_index-1);
+		}
+	}
+
+	void findNeighboursU(){
+		//Make sure everyone finds thier neigbours.
+		for (int i = 0; i < len; ++i)
+		{
+			this->u[i].nodeLeft = findNode(u[i].x_index-1, u[i].y_index);
+			this->u[i].nodeRight = findNode(u[i].x_index+1, u[i].y_index);
+			this->u[i].nodeAbove = findNode(u[i].x_index, u[i].y_index+1);
+			this->u[i].nodeBelow = findNode(u[i].x_index, u[i].y_index-1);
 		}
 	}
 
@@ -479,6 +511,8 @@ public:
 				this->u[i].nodeBelow = findNode(u[i].x_index, u[i].y_index-1);
 			}
 		}
+
+		assert(len == counter);
 
 		this->len = counter; //+1 ?
 		int *x_loc, *y_loc, *y_glo, *x_glo;
@@ -638,8 +672,9 @@ public:
 
 		boundaryIndex = (int*) malloc(1);
 		boundaryVals = (Node*) malloc(1);
-		b = (Node*) malloc(1);
+		b = (Node*) malloc(len*sizeof(Node));
 		d = (Node*) malloc(len*sizeof(Node));
+		w = (Node*) calloc(len,sizeof(Node));
 	}
 
 	Node interpolateGhostPointFromGlobal(int x_glo, int y_glo){
@@ -860,64 +895,35 @@ public:
 		findNeighboursD();
 	}
 
-};
+	void updateBFromFunction( func_t externalForceFunction){
+		datatype x,y;
+		for (int i = 0; i < this->len; ++i)
+		{
+			x = u[i].x;
+			y = u[i].y;
 
-void multigrid(int k, AdaptiveGrid* grid, int pre, int sol, int post){
-	std::cout<<"k: "<<k<<std::endl;
-	//Pre-smoothing
-	for (int i = 0; i < pre; ++i)
-	{
-		grid->jacobiSmootherLaplacianStream();
-	}
-
-	//Calculate error
-	//d = f-L*u;
-	grid->calculateErrorLaplacian();
-
-	grid->restrictDtoB(grid->coarserGrid);
-
-	if(k==1){
-		//"Solves" the coarse system. This should probably be something
-		//better than a Jacobi smoother. OPT!
-	    for (int iter = 0; iter < sol; iter++){
-			grid->coarserGrid->jacobiSmootherLaplacianStream();
+			this->b[i].stream += externalForceFunction(x, y);
 		}
 	}
-	else{
-	    multigrid(k-1, grid->coarserGrid, pre,sol, post);
+
+	void calculateRHS(){
+		for (int i = 0; i < len; ++i)
+		{
+			datatype sum = 0.0f;
+			for (int j = 0; j < len; ++j)
+			{
+				sum += getLaplacianStream(j,i)*u[j].stream;
+			}
+			b[i].stream = d[i].stream + sum;
+		}
 	}
 
-	//for (int i = 0; i < grid->len; ++i)
-	//{
-	//	std::cout<<"d[i]: "<<grid->d[i].x_index<<" ; "<<grid->d[i].y_index<<" , "<<grid->d[i].stream<<std::endl;
-	//}
-	//std::cout<<std::endl;
-
-	std::cout<<"k (again): "<<k<<std::endl;
-	grid->coarserGrid->interpolateD(grid);
-
-	for (int i = 0; i < grid->len; ++i)
-	{
-		grid->u[i].stream += grid->d[i].stream;
-	}
-
-	grid->resetBoundaryLength();
-	grid->setBoundaryLength();
-	free(grid->boundaryIndex);
-	free(grid->boundaryVals);
-	free(grid->b);
-	grid->setBoundary();
-	grid->b = (Node*) calloc(grid->len,sizeof(Node));
-	grid->updateBFromBoundary();
-
-
-	//post-smoothing
-	for(int iter = 0; iter < post; iter++){
-	   grid->jacobiSmootherLaplacianStream();
-	}
-}
+};
 
 #ifndef UNITTESTING
+
+
+/*
 int main(int argc, char const *argv[])
 {
 	Node* fromWavelet;
@@ -995,21 +1001,21 @@ int main(int argc, char const *argv[])
 
 	
 
-	/*
-	middle.interpolateU(fine);
+	
+	//middle.interpolateU(fine);
 
-	std::cout<<"Fine: "<<std::endl;
-	for (int i = 0; i < fine.len; ++i)
-	{
-		std::cout<<"x:"<<fine.u[i].x_index<<", y:"<<fine.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
-	}
+	//std::cout<<"Fine: "<<std::endl;
+	//for (int i = 0; i < fine.len; ++i)
+	//{
+	//	std::cout<<"x:"<<fine.u[i].x_index<<", y:"<<fine.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
+	//}
 
-	std::cout<<"Middle: "<<std::endl;
-	for (int i = 0; i < middle.len; ++i)
-	{
-		std::cout<<"x:"<<middle.u[i].x_index<<", y:"<<middle.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
-	}
-	*/
+	//std::cout<<"Middle: "<<std::endl;
+	//for (int i = 0; i < middle.len; ++i)
+	//{
+	//	std::cout<<"x:"<<middle.u[i].x_index<<", y:"<<middle.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
+	//}
+	
 
 	free(fromWavelet);
 
@@ -1057,26 +1063,27 @@ int main(int argc, char const *argv[])
 	 	std::cout<<grid.u[i].x_index << " ; " <<grid.u[i].y_index << " ; " <<grid.u[i].stream << "\n" ;
 	 }
 
-		grid.jacobiSmootherLaplacianStream();
-		grid.jacobiSmootherLaplacianStream();
-		grid.jacobiSmootherLaplacianStream();
-		grid.jacobiSmootherLaplacianStream();
+	//	grid.jacobiSmootherLaplacianStream();
+	//	grid.jacobiSmootherLaplacianStream();
+	//	grid.jacobiSmootherLaplacianStream();
+	//	grid.jacobiSmootherLaplacianStream();
 
 
-	std::cout<<std::endl;
-	for (int i = 0; i < grid.len; ++i)
-	 {
-	 	std::cout<<grid.u[i].x_index << " ; " <<grid.u[i].y_index << " ; " <<grid.u[i].stream << "\n" ;
-	 }
+	//std::cout<<std::endl;
+	//for (int i = 0; i < grid.len; ++i)
+	// {
+	 //	std::cout<<grid.u[i].x_index << " ; " <<grid.u[i].y_index << " ; " <<grid.u[i].stream << "\n" ;
+	 //}
 
 
-	free(grid.u);
-	free(grid.b);
+	//free(grid.u);
+	//free(grid.b);
 
-	free(coarse.u);
-	free(coarse.b);
+	//free(coarse.u);
+	//free(coarse.b);
 	*/
 
-	return 0;
-}
+//	return 0;
+//}
+
 #endif

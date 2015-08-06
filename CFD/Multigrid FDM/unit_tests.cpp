@@ -1,5 +1,5 @@
 #define UNITTESTING
-#include "adaptive_grid.cpp"
+#include "adaptive_multigrid.cpp"
 
 
 
@@ -119,6 +119,108 @@ void test_smoother(){
 		assert(error<0.001);
 	}
 
+	free(array);
+	free(array2);
+
+}
+
+
+
+
+
+
+datatype my_func(datatype x, datatype y){
+	if(x>=0.25 && x<=0.75 && y>=0.25 && y<=0.75){
+		return 10.0f;
+	}
+	else{
+		return 0.0f;
+	}
+}
+
+void test_adaptiveMultigrid(){
+
+	std::cout<<"Testing Adaptive Multigrid."<<std::endl;
+
+	datatype (*my_func_ptr)(datatype, datatype) = my_func;
+
+
+
+	Node *array;
+
+	array = (Node*) malloc((5+4+16)*sizeof(Node));
+
+	array[0] = Node(0.0f, 1.0f, 0,2, 1.0f, 1.0f, 1.0f);
+	array[1] = Node(1.0f, 0.0f, 2,0, 1.0f, 1.0f, 1.0f);
+	array[2] = Node(0.0f, 0.0f, 0,0, 1.0f, 1.0f, 1.0f);
+	array[3] = Node(1.0f, 1.0f, 2,2, 1.0f, 1.0f, 1.0f);
+	array[4] = Node(0.5f, 0.5f, 1,1, 1.0f, 1.0f, 1.0f);
+
+	float h = 0.25f;
+	for (int x = 0; x < 2; ++x)
+	{
+		for (int y = 0; y < 2; ++y)
+		{
+			array[5 + x*2+y] = Node( (2*x+1)*h, (2*y+1)*h, 2*x+1, 2*y+1, 1.0f, 1.0f, 1.0f);
+		}
+	}
+	h = h/2.0f;
+
+	for (int x = 0; x < 2; ++x)
+	{
+		for (int y = 0; y < 2; ++y)
+		{
+			array[5+4 + x*2+y] = Node( (2*x+1)*h+0.25, (2*y+1)*h+0.25, 2*x+1, 2*y+1, 1.0f, 1.0f, 1.0f);
+		}
+	}
+
+	AdaptiveGrid grid1(1,3,0,0, &array[0], 5, 0.5);
+	AdaptiveGrid grid2(2,3,0,0, &array[5], 4, 0.25);
+	AdaptiveGrid grid3(3,3,2,2, &array[5+4], 4, 0.125);
+
+	grid2.coarserGrid = &grid1;
+	grid3.coarserGrid = &grid2;
+
+	grid1.finerGrid = &grid2;
+	grid2.finerGrid = &grid3;
+
+	grid1.updateBoundaryCoarsestGrid();
+	grid1.updateBFromFunction(my_func_ptr);
+
+	grid2.updateBoundary();
+	//grid2.updateBFromFunction(my_func_ptr);
+
+	grid3.updateBoundary();
+	//grid3.updateBFromFunction(my_func_ptr);
+
+
+	for (int i = 0; i < 100; ++i)
+	{
+		fullMultigrid(2, &grid1, 50, 100, 50, my_func_ptr);
+
+	}
+	
+	for (int i = 0; i < grid1.len; ++i)
+	{
+		std::cout<<"u[i]: "<<grid1.u[i].x_index<<" ; "<<grid1.u[i].y_index<<" , "<<grid1.u[i].stream<<std::endl;
+	}
+	std::cout<<std::endl;
+
+	for (int i = 0; i < grid2.len; ++i)
+	{
+		std::cout<<"u[i]: "<<grid2.u[i].x_index<<" ; "<<grid2.u[i].y_index<<" , "<<grid2.u[i].stream<<std::endl;
+	}
+	std::cout<<std::endl;
+
+	for (int i = 0; i < grid3.len; ++i)
+	{
+		std::cout<<"u[i]: "<<grid3.u[i].x_index<<" ; "<<grid3.u[i].y_index<<" , "<<grid3.u[i].stream<<std::endl;
+	}
+	std::cout<<std::endl;
+
+	free(array);
+	std::cout<<"	Adaptive Multigrid seems to work."<<std::endl;
+
 }
 
 
@@ -127,5 +229,6 @@ int main(int argc, char const *argv[])
 	test_node();
 	test_adaptive_grid();
 	test_smoother();
+	test_adaptiveMultigrid();
 	return 0;
 } 
