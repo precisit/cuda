@@ -2,11 +2,7 @@
 #include <math.h>
 
 datatype test_vortInternal(){
-<<<<<<< HEAD
-	const int n_sqrt = 5;
-=======
 	const int n_sqrt = 17;
->>>>>>> multigrid
 	const int n = n_sqrt * n_sqrt;
 
 	const datatype h = 1.0f/((float)n_sqrt-1.0f);
@@ -55,31 +51,9 @@ datatype test_vortInternal(){
 	 return error;
 }
 
-<<<<<<< HEAD
-void test_RK4_step(){
-	
-	const datatype dt = 0.01;
-	datatype* y_vector;
-	y_vector = (datatype*) malloc(2*sizeof(datatype));
-	y_vector[0] = 0.0f;
-	y_vector[1] = 1.0f;
-	const datatype stream [1]= {0.0};
-	const int n = 2;
-	const int n_sqrt = 2;
-
-	RK4_step(dt, y_vector, stream, n, n_sqrt);
-	free(y_vector);
-}
-
-int main(){
-
-	//std::cout<<test_vortInternal()<<std::endl;
-	test_RK4_step();
-=======
 
 int main(){
 	std::cout<<test_vortInternal()<<std::endl;
->>>>>>> multigrid
 	//run_rungiz();
 
 	return 0;
