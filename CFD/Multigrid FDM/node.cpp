@@ -114,7 +114,6 @@ public:
 		this->x_index = x_index_in;
 		this->y_index = y_index_in;
 
-		//This should probably be changed? FIX!
 		x_index_global = x_global_index_in;
 		y_index_global = y_global_index_in;
 

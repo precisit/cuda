@@ -24,8 +24,8 @@ public:
     int origo_x;
     int origo_y;
 
-    AdaptiveGrid* finerGrid = NULL;
-    AdaptiveGrid* coarserGrid = NULL;
+    AdaptiveGrid* finerGrid;// = NULL;
+    AdaptiveGrid* coarserGrid;// = NULL;
     datatype h;
 
 	bool isInBoundary(const int x, const int y){
@@ -199,7 +199,6 @@ public:
 			}
 		}
 	}
-
 
 	void restrictDtoB(AdaptiveGrid* coarse){
 		for (int i = 0; i < coarse->len; ++i)
@@ -651,12 +650,68 @@ public:
 		//std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 	}
 
-	AdaptiveGrid(){}
+	Node* findNodeGeneral(Node* arr, const int ind_x, const int ind_y){
 
-	AdaptiveGrid(const int layerIn ,const int numLayersIn, const int origo_x_in, const int origo_y_in, 
+
+		/*
+		bool tmp = false;
+
+		for (int i = 0; i < len; ++i)
+		{
+			if(arr[i].x_index == ind_x && arr[i].y_index == ind_y){
+				//return &arr[i];
+				if(tmp == true){
+					assert(0);
+				}
+				tmp = true;
+			}
+		}
+		*/
+
+
+
+
+
+
+
+
+		for (int i = 0; i < len; ++i)
+		{
+			if(arr[i].x_index == ind_x && arr[i].y_index == ind_y){
+				return &arr[i];
+				
+			}
+		}
+		return NULL;
+
+	}		
+
+
+	void findNeighbours(Node * arr){
+		//Make sure everyone finds thier neigbours.
+		for (int i = 0; i < len; ++i)
+		{
+			arr[i].nodeLeft =  findNodeGeneral(arr, arr[i].x_index-1, arr[i].y_index);
+			arr[i].nodeRight = findNodeGeneral(arr, arr[i].x_index+1, arr[i].y_index);
+			arr[i].nodeAbove = findNodeGeneral(arr, arr[i].x_index, arr[i].y_index+1);
+			arr[i].nodeBelow = findNodeGeneral(arr, arr[i].x_index, arr[i].y_index-1);
+		}
+	}
+
+
+
+	AdaptiveGrid(){
+		coarserGrid = NULL;
+		finerGrid = NULL;
+	}
+
+	AdaptiveGrid(const int layerIn, const int numLayersIn, const int origo_x_in, const int origo_y_in, 
 		Node* savedNodesIn , const int numberOfPointsIn, const datatype h_in){
 
 		this->h = h_in;
+
+		coarserGrid = NULL;
+		finerGrid = NULL;
 
 		this->layerNr = layerIn;
 		this->numOfLayers = numLayersIn;
@@ -670,11 +725,40 @@ public:
 			this->setupGrid(savedNodesIn, numberOfPointsIn);
 		}
 
+		b = (Node*) calloc(len, sizeof(Node));
+		d = (Node*) calloc(len, sizeof(Node));
+		w = (Node*) calloc(len, sizeof(Node));
+
+		Node * u_tmp;
+		u_tmp = (Node*) malloc(len*sizeof(Node));
+
+		for (int i = 0; i < len; ++i)
+		{
+			u_tmp[i] = u[i];
+
+			b[i] = u[i];
+			b[i].stream = 0;
+			b[i].vort = 0;
+
+			d[i] = u[i];
+			d[i].stream = 0;
+			d[i].vort = 0;
+
+			w[i] = u[i];
+			w[i].stream = 0;
+			w[i].vort = 0;
+		}
+
+		free(u);
+		u = u_tmp;
+
+		findNeighbours(b);
+		findNeighbours(w);
+		findNeighbours(d);
+		findNeighbours(u);
+
 		boundaryIndex = (int*) malloc(1);
 		boundaryVals = (Node*) malloc(1);
-		b = (Node*) malloc(len*sizeof(Node));
-		d = (Node*) malloc(len*sizeof(Node));
-		w = (Node*) calloc(len,sizeof(Node));
 	}
 
 	Node interpolateGhostPointFromGlobal(int x_glo, int y_glo){
