@@ -1,12 +1,7 @@
 #include "adaptive_grid.cpp"
 #include <cuda.h>
 
-__global__ void test2(Node * arr){
-	int id = threadIdx.x;
-	printf("On thread %d stream=%f \n",id, arr[id].stream);
-	arr[id].stream = 0.5;
-	printf("Second time: on thread %d stream=%f \n",id, arr[id].stream);
-}
+typedef datatype (*func_def)(int, int);
 
 __device__ int abs_dev(const int x){
 	if(x < 0){
@@ -16,6 +11,269 @@ __device__ int abs_dev(const int x){
 		return x;
 	}
 }
+
+__device__ bool is1StepFromBoundary(const Node * u, const int ind, const int maxGlobIndex){
+  return u[ind].x_index_global == 0 || u[ind].x_index_global == maxGlobIndex || u[ind].y_index_global == 0 ||
+    u[ind].y_index_global == maxGlobIndex;
+}
+
+__device__ bool isInCorner(const Node* u, const int ind, const int maxGlobIndex){
+
+  return (u[ind].x_index_global == 0 || u[ind].x_index_global == maxGlobIndex) && (u[ind].y_index_global == 0 ||
+    u[ind].y_index_global == maxGlobIndex);
+
+}
+
+__device__ bool is2StepsFromBoundary(const Node * u, const int ind, const int maxGlobIndex){
+  return u[ind].x_index_global == 1 || u[ind].x_index_global == maxGlobIndex-1 || u[ind].y_index_global == 1 ||
+    u[ind].y_index_global == maxGlobIndex-1;
+}
+
+__device__ datatype dev_invPow(datatype x, const int n){
+  //x^(-n)
+  if (n==0) {
+    return 1.0f;
+  }
+  else{
+    datatype out = x;
+    for(int i=0; i<n-1; ++i){
+      out = out * x;
+    }
+    return 1.0f/out;
+  }
+}
+
+__device__ datatype getLaplacianStream(const Node * u, const int index1, const int index2, const datatype h,
+  const int maxGlobIndex, const int layerNr, const int maxLayerNr){
+    //We can probably get some massive speed-up by reordering the if clauses
+    //in this function. OPT!
+
+	const int dist = abs_dev(u[index1].x_index - u[index2].x_index) +abs_dev(u[index1].y_index - u[index2].y_index);
+
+	if( dist > 1){
+		 	return 0.0f;
+		 }
+    else{
+	    if(is1StepFromBoundary(u, index1, maxGlobIndex) || is1StepFromBoundary(u, index2, maxGlobIndex) ){
+	        if (dist == 0) {
+	    		if (isInCorner(u, index1, maxGlobIndex)) {
+		            //beta+beta
+		            int n = maxLayerNr-layerNr;
+		            datatype tmp = dev_invPow(2.0f, n);
+
+		            return -(1.0f+tmp)*4.0f/( (h*h) * (tmp+tmp*tmp) );
+	          	}
+	        	else{
+		            //-2/h^2 + beta
+		            int n = maxLayerNr-layerNr;
+		            datatype tmp = dev_invPow(2.0f, n);
+		            return -2.0f/(h*h) + -(1.0f+tmp)*2.0f/( (h*h) * (tmp+tmp*tmp) );
+		       	}
+	        }
+	        else if ( is2StepsFromBoundary(u, index1, maxGlobIndex) || is2StepsFromBoundary(u, index2, maxGlobIndex)  ) {
+	        	//alfa
+	        	int n = maxLayerNr-layerNr;
+	        	return 2.0f/( (h*h) * (1+dev_invPow(2.0f, n)) );
+	        }
+	        else{
+	        	return 0.0f;
+	        }
+	    }
+	    else{
+	  		if( dist == 0 ){
+	  			return -4.0f/(h*h);
+	  		}
+	  		else{
+	  			return 1.0f/(h*h);
+	  		}
+	    }
+	}
+}
+
+__device__ datatype __BC_Function(const int x, const int y, const int maxLayer, const int maxGlobIndex){
+
+	//This needs to be fixed for the corners and stuff. FIX!
+	if (y == maxGlobIndex)
+	{
+		return 1.0f;
+	}
+	else if(y == 0){
+		return 0.0f;
+	}
+	else{
+		return .0f;
+	}
+}
+
+__device__ int __findNodeGlobIdx(const Node* u, const int x, const int y, const int len){
+
+	for (int i = 0; i < len; ++i)
+	{
+		if (u[i].x_index_global == x && u[i].y_index_global)
+		{
+			return i;
+		}
+	}
+	return -1;
+
+}
+
+__device__ int __pow_2(const datatype x){
+	return x*x;
+}
+
+__device__ datatype __findValOfClosestPoint(const Node* u, const int x, const int y, const int len){
+	int idx;
+	int dist = 10000000;
+	datatype tmp;
+	for (int i = 0; i < len; ++i)
+	{
+		tmp = __pow_2(u[i].x_index_global-x)+__pow_2(u[i].x_index_global-x);
+		if( tmp < dist){
+			dist = tmp;
+			idx = i;
+		}
+	}
+	return u[idx].stream;
+}
+
+__device__ datatype __interpolateGhostPoint(const Node* u, const Node* u_coarse, const int len_coarse, const int x, const int y, const int layerNr, const int maxLayer, const int maxGlobIndex, const datatype h){
+
+	//So this is stupid. But it should be quick. I hope.
+	//Instead of interpolating the ghost points it just takes the value of the closest point
+	//from the coarser grid.
+	//FIX!
+
+	return __findValOfClosestPoint(u_coarse, x, y, len_coarse);
+
+
+	/*
+	if ( x%2 == 0)
+	{
+		return ( u[__findNodeGlobIdx()].stream + u[__findNodeGlobIdx()].stream ) / 2.0f;
+	}
+	else if( y%2 == 0){
+
+	}
+	else{
+
+	}
+	*/
+}
+
+__global__ void updateBFromInterpolation(Node* b, const Node* u, const int len, const Node* u_coarse, const int len_coarse, const int layerNr, const int maxLayer, const int maxGlobIndex, const datatype h){
+	const int id = threadIdx.x + blockIdx.x*blockDim.x;
+
+	if (id < len)
+	{
+		const int 	   n 		= 	maxLayer-layerNr;
+		const int 	   step 	=	1<<(n);
+		const datatype tmp_val 	= 	dev_invPow(2.0f, n);
+		const datatype gamma 	= 	2.0f/( (h*h) * (tmp_val+tmp_val*tmp_val) );
+		
+
+		if(u[id].nodeRight == NULL){
+			if (u[id].x_index_global == maxGlobIndex)
+			{
+				b[id].stream += -gamma*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxLayer, maxGlobIndex);
+			}
+			else{
+				datatype tmp = __interpolateGhostPoint(u, u_coarse, len_coarse, u[id].x_index_global+step, u[id].y_index_global, layerNr, maxLayer, maxGlobIndex, h);
+				b[id].stream += -(tmp)/(h*h);
+			}
+		}
+		if (u[id].nodeLeft == NULL){
+			if(u[id].x_index_global == 0){
+				b[id].stream += -gamma*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxLayer, maxGlobIndex);
+			}
+			else{
+				datatype tmp = __interpolateGhostPoint(u, u_coarse, len_coarse, u[id].x_index_global-step, u[id].y_index_global, layerNr, maxLayer, maxGlobIndex, h);
+				b[id].stream += -(tmp)/(h*h);
+			}
+			
+		}
+		if(u[id].nodeAbove == NULL){
+			if (u[id].y_index_global == maxGlobIndex)
+			{
+				b[id].stream += -gamma*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxLayer, maxGlobIndex);
+			}
+			else{
+				datatype tmp = __interpolateGhostPoint(u, u_coarse, len_coarse, u[id].x_index_global, u[id].y_index_global+step, layerNr, maxLayer, maxGlobIndex, h);
+				b[id].stream += -(tmp)/(h*h);
+			}
+		}
+		if (u[id].nodeBelow == NULL){
+			if (u[id].y_index_global == 0)
+			{
+				b[id].stream += -gamma*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxLayer, maxGlobIndex);
+			}
+			else{
+				datatype tmp = __interpolateGhostPoint(u, u_coarse, len_coarse, u[id].x_index_global, u[id].y_index_global-step, layerNr, maxLayer, maxGlobIndex, h);
+				b[id].stream += -(tmp)/(h*h);
+			}
+		}
+	}
+}
+
+__global__ void dev_updateBFromBoundary(Node* b, const Node* u, const int len, const int layerNr, const int maxLayer, const int maxGlobIndex, const datatype h){
+
+	const int id = threadIdx.x + blockIdx.x*blockDim.x;
+
+	if (id < len)
+	{
+		if (is1StepFromBoundary(u, id, maxGlobIndex))
+		{
+			const int n = maxLayer-layerNr;
+			const datatype tmp = dev_invPow(2.0f, n);
+			const datatype gamma = 2.0f/( (h*h) * (tmp+tmp*tmp) );
+
+			if (isInCorner(u, id, maxGlobIndex))
+			{
+				b[id].stream += -2.0f*gamma*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxLayer, maxGlobIndex);
+			}
+			else{
+				b[id].stream += -gamma*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxLayer, maxGlobIndex);
+			}
+		}
+	}
+}
+
+void setupBoundaryOnCoarsestGrid(Node* bc, const int len , func_def BC_Function){
+
+	int counter = 0;
+
+	int x = -1;
+	int y;
+	for (int y = -1; y < len+1; ++y)
+	{
+		bc[counter].stream = BC_Function(x,y);
+		counter++;
+	}
+
+	x = len;
+	for (int y = -1; y < len+1; ++y)
+	{
+		bc[counter].stream = BC_Function(x,y);
+		counter++;
+	}
+
+	y = -1;
+	for (int x = -1; x < len+1; ++x)
+	{
+		bc[counter].stream = BC_Function(x,y);
+		counter++;
+	}
+
+	y = len;
+	for (int x = -1; x < len+1; ++x)
+	{
+		bc[counter].stream = BC_Function(x,y);
+		counter++;
+	}
+
+}
+
+#ifdef OLDCODE
 __device__ datatype getLaplacianStream(const Node * u, const int index1, const int index2, const datatype h){
 	const int dist = abs_dev(u[index1].x_index - u[index2].x_index) +abs_dev(u[index1].y_index - u[index2].y_index);
 
@@ -35,16 +293,16 @@ __device__ datatype getLaplacianStream(const Node * u, const int index1, const i
 			 	//}
 			}
 		}
-
 }
+#endif
 
-__global__ void calculateErrorLaplacian(const Node* b, const Node* u, Node* d, const int len, const datatype h){
+__global__ void calculateErrorLaplacian(const Node* b, const Node* u, Node* d, const int len, const datatype h, const int maxGlobIndex, const int layerNr, const int maxLayerNr){
 	int id = threadIdx.x + blockIdx.x*blockDim.x;
 
 	if(id < len){
 		datatype sum = 0.0f;
 		for(int j=0; j<len; j++){
-			sum += getLaplacianStream(u, j, id, h)*u[j].stream;
+			sum += getLaplacianStream(u, j, id, h, maxGlobIndex, layerNr, maxLayerNr)*u[j].stream;
 		}
 		d[id].stream = b[id].stream - sum;
 	}
@@ -60,21 +318,21 @@ __global__ void restrictMat(Node* u_coarse, const int len_coarse, Node* u_fine, 
 		{
 			if( u_fine[j].x_index_global == u_coarse[i].x_index_global 
 					&& u_fine[j].y_index_global == u_coarse[i].y_index_global )
-				{
-					u_coarse[i].stream = u_fine[j].stream;
-				}
+			{
+				u_coarse[i].stream = u_fine[j].stream;
+			}
 		}
 	}
 }
 
-__global__ void calculateRHS(const Node* u, const Node* d, Node* b, const int len, const datatype h){
+__global__ void calculateRHS(const Node* u, const Node* d, Node* b, const int len, const datatype h, const int maxGlobIndex, const int layerNr, const int maxLayerNr){
 	const int id = threadIdx.x + blockIdx.x*blockDim.x;
 	if( id < len){
 
 		datatype sum = 0.0f;
 		for (int j = 0; j < len; ++j)
 		{
-			sum += getLaplacianStream(u, j, id, h )*u[j].stream;
+			sum += getLaplacianStream(u, j, id, h , maxGlobIndex, layerNr, maxLayerNr )*u[j].stream;
 		}
 		b[id].stream = d[id].stream + sum;
 	}
@@ -104,7 +362,6 @@ __global__ void add_gpu(Node* to, const Node* from, const int len){
 	}
 }
 
-
 __device__ datatype findNodeIdx(const Node* arr, const int x, const int y, const int n){
 	for (int i = 0; i < n; ++i)
 	{
@@ -128,7 +385,7 @@ __device__ datatype findNodeVal(const Node* arr, const int x, const int y, const
 	return 0.0f;
 }
 
-__global__ void interpolate(Node* u_fine, const Node* u_coarse, const int len_fine, const int len_coarse){
+__global__ void interpolate(Node* u_fine, const Node* u_coarse, const int len_fine, const int len_coarse, const int layerNr, const int maxLayerNr, const int maxGlobIndex, const datatype h, Node* b){
 
 	const int i = threadIdx.x + blockIdx.x * blockDim.x;
 	//const int thr = threadIdx.x;
@@ -138,7 +395,6 @@ __global__ void interpolate(Node* u_fine, const Node* u_coarse, const int len_fi
 
 	if (i < len_fine)
 	{
-
 		bool isOnCoarserGrid = false;
 
 		//Take the values from the coarser grid.
@@ -172,8 +428,9 @@ __global__ void interpolate(Node* u_fine, const Node* u_coarse, const int len_fi
 
 			u_fine[tmp_idx].stream = (u_fine[i].stream+tmp_val)/2.0f;
 		}
-	}
 
+		//updateBFromInterpolation(i, b, u_fine, len_fine, u_coarse, len_coarse, layerNr, maxLayerNr, maxGlobIndex, h);
+	}
 }
 
 #ifdef OLDCODE
@@ -282,13 +539,9 @@ __global__ void findNeighbours(Node* array, const int len ){
 			}
 		}
 	}
-	//if(array[i].nodeRight == NULL){
-	//	printf("i: %d \n", i);
-	//	printf("threadIdx: %d, x: %d, y: %d, stream: %f \n", i, array[i].x_index, array[i].y_index, array[i].stream);
-	//}
 }
 
-__global__ void jacobiSmootherLaplacianStream(Node *from, Node * to, Node * b, const datatype h, const int len){
+__global__ void jacobiSmootherLaplacianStream(Node *from, Node * to, Node * b, const datatype h, const int len, const int maxGlobIndex, const int layerNr, const int maxLayerNr){
 	const int i = threadIdx.x + blockIdx.x * blockDim.x;
 	if(i < len){
 
@@ -296,10 +549,10 @@ __global__ void jacobiSmootherLaplacianStream(Node *from, Node * to, Node * b, c
 		for (int j = 0; j < len; ++j)
 		{
 			if(j != i){
-				sum += getLaplacianStream(from, i, j, h) * from[j].stream;
+				sum += getLaplacianStream(from, i, j, h, maxGlobIndex, layerNr, maxLayerNr) * from[j].stream;
 			}
 		}
-		to[i].stream = (b[i].stream - sum) / getLaplacianStream(from, i,i, h);
+		to[i].stream = (b[i].stream - sum) / getLaplacianStream(from, i,i, h , maxGlobIndex, layerNr, maxLayerNr);
 	}
 }
 
@@ -322,7 +575,7 @@ __global__ void setVectorsToZero(Node * arr, const int len){
 	}
 }
 
-void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t externalFunc){
+void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, const int maxGlobIndex, const int maxLayerNr){
 
 	//Define the size of the current grid in a CUDA format
 	dim3 block_size_1d(grid->len);
@@ -330,14 +583,11 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t
 	//And the same for the coarser grid.
 	dim3 block_size_1d_coarse(grid->coarserGrid->len);
 
-	
-
-
 	//Pre-smoothing
 	for (int i = 0; i < k*pre/2 + 1; ++i)
 	{
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->u, grid->d, grid->b, grid->h, grid->len);
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->d, grid->u, grid->b, grid->h, grid->len);
+		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->u, grid->d, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->d, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
 	}
 
 	//std::cout<<"  1  "<<std::endl;
@@ -345,7 +595,7 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t
 
 	//Calculate error
 	//d = f-L*u;
-	calculateErrorLaplacian<<<1, block_size_1d>>>(grid->b, grid->u, grid->d, grid->len, grid->h);
+	calculateErrorLaplacian<<<1, block_size_1d>>>(grid->b, grid->u, grid->d, grid->len, grid->h, maxGlobIndex, grid->layerNr, maxLayerNr);
 
 	//std::cout<<"  2  "<<std::endl;
 	ERRORCHECK();
@@ -357,10 +607,11 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t
 	restrictMat<<<1, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->len, grid->u , grid->len ); 
 
 	//Calculate the right hand side b for the next layer.
-	calculateRHS<<<1, block_size_1d_coarse>>>(grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->coarserGrid->len, grid->coarserGrid->h);
+	//calculateRHS<<<1, block_size_1d_coarse>>>(grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->coarserGrid->len, grid->coarserGrid->h, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr);
 
 	//Copy u to w.
 	copy<<<1, block_size_1d>>>(grid->coarserGrid->w, grid->coarserGrid->u, grid->coarserGrid->len);
+
 
 	//std::cout<<"  3  "<<std::endl;
 	ERRORCHECK();
@@ -371,12 +622,12 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t
 		//"Solves" the coarse system. This should probably be something
 		//better than a Jacobi smoother. OPT!
 	    for (int iter = 0; iter < sol/2 + 1 ; iter++){
-			jacobiSmootherLaplacianStream<<<1, block_size_1d_coarse>>>( grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->h, grid->coarserGrid->len );
-			jacobiSmootherLaplacianStream<<<1, block_size_1d_coarse>>>( grid->coarserGrid->d, grid->coarserGrid->u, grid->coarserGrid->b, grid->h, grid->coarserGrid->len );
+			jacobiSmootherLaplacianStream<<<1, block_size_1d_coarse>>>( grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->h, grid->coarserGrid->len, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr );
+			jacobiSmootherLaplacianStream<<<1, block_size_1d_coarse>>>( grid->coarserGrid->d, grid->coarserGrid->u, grid->coarserGrid->b, grid->h, grid->coarserGrid->len, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr );
 		}
 	}
 	else{
-		multigrid_gpu(k-1, grid->coarserGrid, pre, sol, post, externalFunc);
+		multigrid_gpu(k-1, grid->coarserGrid, pre, sol, post, maxGlobIndex, maxLayerNr);
 	}
 
 	//std::cout<<"  4  "<<std::endl;
@@ -386,8 +637,7 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t
 
 	//std::cout<<"  5  "<<std::endl;
 	ERRORCHECK();
-
-	interpolate<<<1, block_size_1d>>>( grid->d, grid->coarserGrid->d, grid->len, grid->coarserGrid->len);
+	interpolate<<<1, block_size_1d>>>( grid->d, grid->coarserGrid->d, grid->len, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h, grid->b);
 
 	//std::cout<<"  6  "<<std::endl;
 	ERRORCHECK();
@@ -395,13 +645,21 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, func_t
 
 	add_gpu<<<1, block_size_1d>>>(grid->w, grid->d, grid->len);
 
+	//Copy u from w
+	copy<<<1, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->w, grid->coarserGrid->len);
+
+	//update b
+	setVectorsToZero<<<1, block_size_1d>>>(grid->b, grid->len);
+	dev_updateBFromBoundary<<<1, block_size_1d>>>(grid->b, grid->u, grid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
+	updateBFromInterpolation<<<1, block_size_1d>>>(grid->b, grid->u, grid->len, grid->coarserGrid->u, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
+
 	//Post-smoothing
 	for (int i = 0; i < k*post/2 + 1; ++i)
 	{
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len);
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->u, grid->w, grid->b, grid->h, grid->len);
+		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->u, grid->w, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
 	}
-	jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len);
+	jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
 }
 
 __global__ void printAll(Node * arr, const int len){
@@ -478,10 +736,10 @@ void move2host(AdaptiveGrid * grid){
 	cudaMemcpy( w_host, grid->w, sizeof(Node)*grid->len, cudaMemcpyDeviceToHost);
 	cudaMemcpy( d_host, grid->d, sizeof(Node)*grid->len, cudaMemcpyDeviceToHost);
 
-	//cudaFree(grid->u);
-	//cudaFree(grid->b);
-	//cudaFree(grid->w);
-	//cudaFree(grid->d);
+	cudaFree(grid->u);
+	cudaFree(grid->b);
+	cudaFree(grid->w);
+	cudaFree(grid->d);
 
 	grid->u = u_host;
 	grid->w = w_host;

@@ -2,6 +2,7 @@
 #include "node.cpp"
 
 typedef datatype (*func_t)(datatype, datatype);
+typedef datatype (*func_)(int, int);
 
 class AdaptiveGrid{
 public:
@@ -948,6 +949,7 @@ public:
 		}
 	}
 
+	/*
 	void updateBoundary(){
 		this->resetBoundaryLength();
 		this->setBoundaryLength();
@@ -978,6 +980,7 @@ public:
 		}
 		findNeighboursD();
 	}
+	*/
 
 	void updateBFromFunction( func_t externalForceFunction){
 		datatype x,y;
