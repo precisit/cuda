@@ -1,6 +1,7 @@
 #include <assert.h>
 #include "node.cpp"
 
+/*
 typedef datatype (*func_t)(datatype, datatype);
 typedef datatype (*func_)(int, int);
 
@@ -28,8 +29,9 @@ public:
     AdaptiveGrid* finerGrid;// = NULL;
     AdaptiveGrid* coarserGrid;// = NULL;
     datatype h;
+    */
 
-	bool isInBoundary(const int x, const int y){
+	bool AdaptiveGrid::isInBoundary(const int x, const int y){
 		//std::cout<<"hello there!: "<<lenOfBoundary<<std::endl;
 		for (int i = 0; i < lenOfBoundary; ++i)
 		{
@@ -41,17 +43,17 @@ public:
 		return false;
 	}
 
-	void setB(const datatype val, const int i){
+	void AdaptiveGrid::setB(const datatype val, const int i){
 		assert(i<len && i>=0);
 		b[i].stream = val;
 	}
 
-	datatype getB(const int i){
+	datatype AdaptiveGrid::getB(const int i){
 		assert(i<len && i>=0);
 		return b[i].stream;
 	}
 
-	datatype getFromBoundary(const int x, const int y){
+	datatype AdaptiveGrid::getFromBoundary(const int x, const int y){
 		//std::cout<<"hi!"<<std::endl;
 		for (int i = 0; i < lenOfBoundary; ++i)
 		{
@@ -64,7 +66,7 @@ public:
 		return boundaryVals[0].stream;
 	}
 
-	void calculateErrorLaplacian(){
+	void AdaptiveGrid::calculateErrorLaplacian(){
 		datatype sum;
 		for(int i=0; i<len; i++){
 			sum = 0.0f;
@@ -75,7 +77,7 @@ public:
 		}
 	}
 
-	datatype getLaplacianStream(const int index1, const int index2){
+	datatype AdaptiveGrid::getLaplacianStream(const int index1, const int index2){
 
 		assert(index1 >= 0 && index1 < len);
 		assert(index2 >= 0);
@@ -101,11 +103,11 @@ public:
 		}
 	}
 
-	void resetBoundaryLength(){
+	void AdaptiveGrid::resetBoundaryLength(){
 		lenOfBoundary = 0;
 	}
 
-	bool isInGrid(const int x, const int y){
+	bool AdaptiveGrid::isInGrid(const int x, const int y){
 		for (int i = 0; i < len; ++i)
 		{
 			if(u[i].x_index==x && u[i].y_index==y){
@@ -116,7 +118,7 @@ public:
 		return false;
 	}
 
-	void setBoundaryLength(){
+	void AdaptiveGrid::setBoundaryLength(){
 		//std::cout<<"                    "<<std::endl;
 		int counter = 0;
 		int x, y;
@@ -157,17 +159,17 @@ public:
 //	}
 
 
-	void setU(const datatype val, const int i){
+	void AdaptiveGrid::setU(const datatype val, const int i){
 		assert(i<len && i>=0);
 		u[i].stream = val;
 	}
 
-	datatype getU(const int i){
+	datatype AdaptiveGrid::getU(const int i){
 		assert(i<len && i>=0);
 		return u[i].stream;
 	}
 
-	void jacobiSmootherLaplacianStream(){
+	void AdaptiveGrid::jacobiSmootherLaplacianStream(){
 		/*
 			Smoothes the error to D u = b.
 			u = (p, v_x, v_y)^T
@@ -187,7 +189,7 @@ public:
 			}
 		}
 
-	void restrictUtoU(AdaptiveGrid* coarse){
+	void AdaptiveGrid::restrictUtoU(AdaptiveGrid* coarse){
 		for (int i = 0; i < coarse->len; ++i)
 		{
 			for (int j = 0; j < this->len; ++j)
@@ -201,7 +203,7 @@ public:
 		}
 	}
 
-	void restrictDtoB(AdaptiveGrid* coarse){
+	void AdaptiveGrid::restrictDtoB(AdaptiveGrid* coarse){
 		for (int i = 0; i < coarse->len; ++i)
 		{
 			for (int j = 0; j < this->len; ++j)
@@ -215,7 +217,7 @@ public:
 		}
 	}
 
-	void restrictDtoD(AdaptiveGrid* coarse){
+	void AdaptiveGrid::restrictDtoD(AdaptiveGrid* coarse){
 		for (int i = 0; i < coarse->len; ++i)
 		{
 			for (int j = 0; j < this->len; ++j)
@@ -229,7 +231,7 @@ public:
 		}
 	}
 
-	Node * findNode(const int ind_x, const int ind_y){
+	Node* AdaptiveGrid::findNode(const int ind_x, const int ind_y){
 
 		for (int i = 0; i < len; ++i)
 		{
@@ -243,7 +245,7 @@ public:
 
 	}
 
-	Node * findNodeD(const int ind_x, const int ind_y){
+	Node * AdaptiveGrid::findNodeD(const int ind_x, const int ind_y){
 
 		for (int i = 0; i < len; ++i)
 		{
@@ -257,7 +259,7 @@ public:
 
 	}
 
-	void interpolateU(AdaptiveGrid *fine){
+	void AdaptiveGrid::interpolateU(AdaptiveGrid *fine){
 		//This doesn't work. FIX!
 		/*for (int i = 0; i < fine->len; ++i)
 		{
@@ -307,7 +309,7 @@ public:
 	}
 
 
-	void interpolateD(AdaptiveGrid *fine){
+	void AdaptiveGrid::interpolateD(AdaptiveGrid *fine){
 		/*
 		for (int i = 0; i < fine->len; ++i)
 		{
@@ -357,7 +359,7 @@ public:
 		}
 	}
 
-	void findNeighboursD(){
+	void AdaptiveGrid::findNeighboursD(){
 		//Make sure everyone finds thier neigbours.
 		for (int i = 0; i < len; ++i)
 		{
@@ -368,7 +370,7 @@ public:
 		}
 	}
 
-	void findNeighboursU(){
+	void AdaptiveGrid::findNeighboursU(){
 		//Make sure everyone finds thier neigbours.
 		for (int i = 0; i < len; ++i)
 		{
@@ -380,7 +382,7 @@ public:
 	}
 
 
-	void setNeighbours(){
+	void AdaptiveGrid::setNeighbours(){
 
 		for (int i = 0; i < numOfPointsChosen; ++i)
 		{
@@ -400,7 +402,7 @@ public:
 		}
 	}
 
-	void local2global(const int* x_loc, const int* y_loc, int* x_glo, int* y_glo ){
+	void AdaptiveGrid::local2global(const int* x_loc, const int* y_loc, int* x_glo, int* y_glo ){
 
 		assert( this->layerNr > 0 );
 		assert( this->layerNr <= this->numOfLayers );
@@ -410,7 +412,7 @@ public:
 	}
 
 
-	void setupGrid(Node* savedNodes, const int numberOfPoints){
+	void AdaptiveGrid::setupGrid(Node* savedNodes, const int numberOfPoints){
 		//free(pointsChosenByWavelet);
 		pointsChosenByWavelet = (Node**) malloc(numberOfPoints*sizeof(Node*));
 		this->numOfPointsChosen = numberOfPoints;
@@ -538,7 +540,7 @@ public:
 		//std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 	}
 
-	void setupCoarsestGrid(Node* savedNodes, const int numberOfPoints){
+	void AdaptiveGrid::setupCoarsestGrid(Node* savedNodes, const int numberOfPoints){
 		/*
 			The coarsest grid has five chosen points! It always has five chosen points.
 			ALWAYS!
@@ -651,7 +653,7 @@ public:
 		//std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 	}
 
-	Node* findNodeGeneral(Node* arr, const int ind_x, const int ind_y){
+	Node* AdaptiveGrid::findNodeGeneral(Node* arr, const int ind_x, const int ind_y){
 
 
 		/*
@@ -688,7 +690,7 @@ public:
 	}		
 
 
-	void findNeighbours(Node * arr){
+	void AdaptiveGrid::findNeighbours(Node * arr){
 		//Make sure everyone finds thier neigbours.
 		for (int i = 0; i < len; ++i)
 		{
@@ -701,12 +703,12 @@ public:
 
 
 
-	AdaptiveGrid(){
+	AAdaptiveGrid::daptiveGrid(){
 		coarserGrid = NULL;
 		finerGrid = NULL;
 	}
 
-	AdaptiveGrid(const int layerIn, const int numLayersIn, const int origo_x_in, const int origo_y_in, 
+	AdaptiveGrid::AdaptiveGrid(const int layerIn, const int numLayersIn, const int origo_x_in, const int origo_y_in, 
 		Node* savedNodesIn , const int numberOfPointsIn, const datatype h_in){
 
 		this->h = h_in;
@@ -762,7 +764,7 @@ public:
 		boundaryVals = (Node*) malloc(1);
 	}
 
-	Node interpolateGhostPointFromGlobal(int x_glo, int y_glo){
+	Node AdaptiveGrid::interpolateGhostPointFromGlobal(int x_glo, int y_glo){
 		//std::cout<<"GLLLLLLLLLLLLLLLLLLLLLLOBAL!!!!!"<<std::endl;
 		//std::cout<<"Llllllllllllllllllayer: "<<this->layerNr<<std::endl;
 		assert(this->layerNr != 1);
@@ -805,7 +807,7 @@ public:
 		return outNode;
 	}
 
-	Node findNodeFromGlobalIndex(const int x, const int y){
+	Node AdaptiveGrid::findNodeFromGlobalIndex(const int x, const int y){
 		for (int i = 0; i < len; ++i)
 		{
 			if(u[i].x_index_global == x && u[i].y_index_global == y){
@@ -817,7 +819,7 @@ public:
 		return this->interpolateGhostPointFromGlobal(x, y);
 	}
 
-	Node interpolateGhostPoint(int x_loc, int y_loc){
+	Node AdaptiveGrid::interpolateGhostPoint(int x_loc, int y_loc){
 		assert( this->coarserGrid != NULL );
 		assert( this->coarserGrid->numOfLayers == this->numOfLayers );
 		int *x_glo, *y_glo;
@@ -866,7 +868,7 @@ public:
 
 	}
 
-	void setBoundary(){
+	void AdaptiveGrid::setBoundary(){
 		int counter = 0;
 		int x, y;
 		boundaryIndex = (int*) malloc(2*lenOfBoundary*sizeof(int));
@@ -918,7 +920,7 @@ public:
 		}
 	}
 
-	void updateBFromBoundary(){
+	void AdaptiveGrid::updateBFromBoundary(){
 		datatype boundary;
 		for (int i = 0; i < len; ++i)
 		{
@@ -982,7 +984,7 @@ public:
 	}
 	*/
 
-	void updateBFromFunction( func_t externalForceFunction){
+	void AdaptiveGrid::updateBFromFunction( func_t externalForceFunction){
 		datatype x,y;
 		for (int i = 0; i < this->len; ++i)
 		{
@@ -993,7 +995,7 @@ public:
 		}
 	}
 
-	void calculateRHS(){
+	void AdaptiveGrid::calculateRHS(){
 		for (int i = 0; i < len; ++i)
 		{
 			datatype sum = 0.0f;
@@ -1005,7 +1007,6 @@ public:
 		}
 	}
 
-};
 
 #ifndef UNITTESTING
 
