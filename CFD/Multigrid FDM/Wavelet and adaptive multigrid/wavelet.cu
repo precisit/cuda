@@ -47,10 +47,18 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int idy = threadIdx.y + blockIdx.y * blockDim.y;
 
+		if (cornerNode(matrix, idx, idy, row, colum) == true){
+			matrix[idx*colum + idy].isPicked = true;
+			matrix[idx*colum + idy].layer = layers;
 
-	for (int i=0; i<layers; i++){
+		}
+
+
+	for (int i=1; i<layers; i++){
 
 		if(idx < row -step && idy < colum -step){
+		
+			if ((matrix[idx*colum + idy].x_index_global % step == 0) && (matrix[idx*colum + idy].y_index_global % step == 0)){
 
 			float p1 = matrix[idx*colum + idy].vort;
 			float p2 = matrix[idx*colum + idy + step].vort;
@@ -60,34 +68,33 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 			//float p4 = matrix[(idx + step)*colum + idy + step].vort;
 			//float p5 = matrix[(idx + step/2)*colum + idy + step/2].vort;
 		
-			if (idx % step == 0) {
 			
 				if (interpolDot(p1, p3, p5, tol) == true){
 
 					matrix[(idx + step/2)*colum + idy].isPicked = true;
-					matrix[(idx + step/2)*colum + idy].layer = i+1;	
+					matrix[(idx + step/2)*colum + idy].layer = i;	
 					
 				}
 		
-			}
-			if (idy % step == 0){
+			
+		
+
+		//if(idy % step == 0){
+			
 
 				if (interpolDot(p1, p2, p4, tol) == true){
 
 					matrix[idx*colum + idy + step/2].isPicked = true;
-					matrix[idx*colum + idy + step/2].layer = i+1;	
+					matrix[idx*colum + idy + step/2].layer = i;	
 					
 				}
 
-			}
+			//}
 					
 		}
 
 
-		if (cornerNode(matrix, idx, idy, row, colum) == true){
-			matrix[idx*colum + idy].isPicked = true;
-			matrix[idx*colum + idy].layer = i+1;
-
+	
 		}		
 
 		step = step*2;
@@ -172,13 +179,13 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 	}
 
 
-	/*for(int i=0; i<row*colum; i++){
+	//for(int i=0; i<row*colum; i++){
 
-		std::cout<<"tja"<< /*matrix[i].x_index<<std::endl<< matrix[i].y_index<<std::endl<< matrix[i].x<<std::endl<< matrix[i].y<<std::endl<< matrix[i].vort<<std::endl<<matrix[i].isPicked<<std::endl;
+		//std::cout<<"tja"<< /*matrix[i].x_index<<std::endl<< matrix[i].y_index<<std::endl<< matrix[i].x<<std::endl<< matrix[i].y<<std::endl<< matrix[i].vort<<std::endl<<matrix[i].isPicked<<std::endl;
 	
-	}*/
+	//}
 
-	/*float vort;
+	float vort;
 
 	for(int y=colum-1; y>=0; y--){
     	
@@ -216,7 +223,7 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
         }
 
      	std::cout<<std::endl;
-    }*/
+    }
 
    //Beräkna antal valda noder
 
