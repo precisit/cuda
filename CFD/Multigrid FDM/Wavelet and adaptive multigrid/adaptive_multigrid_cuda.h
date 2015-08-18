@@ -2,7 +2,7 @@
 #define ADAPTIVE_MULTIGRID_CUDA_H
 
 #include "adaptive_grid.h"
-#include <cuda.h>
+//#include <cuda.h>
 #include "node.h"
 #include "parameters.h"
 
@@ -73,6 +73,6 @@ void move2gpu(AdaptiveGrid * grid);
 
 void move2host(AdaptiveGrid * grid);
 
-void adaptive_multigrid(Node* array, int* origoArray, int countTrue);
+void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int LAYERS);
 
 #endif

@@ -60,10 +60,12 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
 	k3 = (Node*) malloc(countTrue*sizeof(Node));
 	k4 = (Node*) malloc(countTrue*sizeof(Node));
 
+
+
 	//std::cout<<"f: ";
-	for(int i= 0; i<countTrue; i++){
+	//for(int i= 0; i<countTrue; i++){
 		//std::cout<<f[i]<<std::endl;
-	}
+	//}
     //std::cout<<std::endl;
 
     for (i = 0; i < countTrue; i++){
@@ -73,8 +75,12 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
     for (i=0; i < countTrue; i++){
     	y[i] = y_vector[i] + k1[i]/2.0f;
     }
-    
-    adaptive_multigrid(y_vector, origoArray, countTrue);
+
+
+
+    std::cout<<"multigrid 1 \n";
+    adaptive_multigrid(y_vector, origoArray, countTrue, LAYERS);
+    //assert(0);
     
     for (i = 0; i < countTrue; i++){
     	k2[i] = f[i]/(1.0/dt);
@@ -84,7 +90,8 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
     	y[i] = y_vector[i] + k2[i]/2.0f;
     }
 
-    adaptive_multigrid(y_vector, origoArray, countTrue);
+    std::cout<<"multigrid 2 \n";
+    adaptive_multigrid(y_vector, origoArray, countTrue, LAYERS);
     
     for (i = 0; i < countTrue; i++)
     k3[i] = f[i]/(1.0/dt);
@@ -92,8 +99,8 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
     for (i=0; i < countTrue; i++){
    		y[i] = y_vector[i] + k3[i];
    	}
-   	
-   	adaptive_multigrid(y_vector, origoArray, countTrue);
+   	std::cout<<"multigrid 3 \n";
+   	adaptive_multigrid(y_vector, origoArray, countTrue, LAYERS);
     
     for (i = 0; i < countTrue; i++){
     	k4[i] = f[i]/(1.0/dt);
@@ -106,7 +113,7 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
 
     std::cout<<"y_vector: ";
     for(int i= 0; i<countTrue; i++){
-		std::cout<<y_vector[i].vort<<" "<<y_vector[i].stream<<std::endl;
+		//std::cout<<y_vector[i].vort<<" "<<y_vector[i].stream<<std::endl;
 	}
 	//std::cout<<std::endl;
 
@@ -116,6 +123,8 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
 	free(k2);
 	free(k3);
 	free(k4);
+	
+	std::cout<<"multigrid done \n";
 }
 
 /*

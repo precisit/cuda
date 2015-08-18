@@ -2,6 +2,8 @@
 #define ADAPTIVE_GRID_H
 
 #include <assert.h>
+#include <vector>
+//#include <cuda.h>
 #include "node.h"
 //#include "parameters.h"
 
@@ -16,6 +18,7 @@ public:
     Node* b;
     Node* d;
     Node* w;
+    std::vector<Node> vec;
 
     Node* boundaryVals;
     int* boundaryIndex;
@@ -109,6 +112,14 @@ public:
 	void updateBFromFunction( func_t externalForceFunction);
 
 	void calculateRHS();
+
+	int removeDumbPoints(Node* savedNodesIn, Node* savedNodes, const int numberOfPointsIn);
+
+	Node* findGlobNodeGeneral(Node* arr, const int ind_x, const int ind_y, const int lenIn);
+
+	void setupFromVector();
+
+	void global2local(const int x_glo, const int y_glo, int* x_loc, int* y_loc );
 
 };
 
