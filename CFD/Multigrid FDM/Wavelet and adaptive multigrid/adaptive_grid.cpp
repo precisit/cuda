@@ -577,11 +577,13 @@ public:
 		free(y_local);
 		
 		int counter = numberOfPoints;
+		len = counter;
 
 		std::cout<<"lay_Nr: "<<layerNr<<std::endl;
 		std::cout<<"lay_Nr_max: "<<numOfLayers<<std::endl;
 		std::cout<<"origo_x: "<<origo_x<<std::endl;
 		std::cout<<"origo_y: "<<origo_y<<std::endl;
+		std::cout<<"counter (!): "<<counter<<std::endl;
 		for (int i = 0; i < 5; ++i)
 		{
 			std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
@@ -590,6 +592,7 @@ public:
 
 		//Start with node (0,1)
 		Node *tmpNodePtr;
+
 		for (int i = 0; i < numberOfPoints; ++i)
 		{
 			if(u[i].x_index == 0 && u[i].y_index == 0){
@@ -602,6 +605,7 @@ public:
 		tmp.y_index++;
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
+			std::cout<<"test 1\n";
 			u[counter] = tmp;
 			counter++;
 		}		
@@ -611,6 +615,7 @@ public:
 		tmp.x_index++;
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
+			std::cout<<"test 2\n";
 			u[counter] = tmp;
 			counter++;
 		}	
@@ -629,6 +634,7 @@ public:
 		tmp.y_index--;
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
+			std::cout<<"test 3\n";
 			u[counter] = tmp;
 			counter++;
 		}	
@@ -641,9 +647,24 @@ public:
 
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
+			std::cout<<"test 4\n";
 			u[counter] = tmp;
 			counter++;
 		}	
+
+
+
+
+
+		for (int i = 0; i < 5; ++i)
+		{
+			std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
+			std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
+		}
+
+
+
+
 
 		//Make sure everyone finds thier neigbours.
 		for (int i = 0; i < counter+1; ++i)
@@ -666,7 +687,8 @@ public:
 			}
 		}
 		std::cout<<"count "<<counter<<std::endl;
-		assert(len == counter);
+		assert(9 == counter);
+		len = counter;
 		int *x_loc, *y_loc, *y_glo, *x_glo;
 		x_loc =(int*) malloc(sizeof(int));
 		y_loc =(int*) malloc(sizeof(int));
@@ -719,6 +741,7 @@ public:
 		for (int i = 0; i < len; ++i)
 		{
 			if(arr[i].x_index == ind_x && arr[i].y_index == ind_y){
+				std::cout<<"i "<<i<<std::endl;
 				return &arr[i];
 				
 			}
@@ -1179,6 +1202,17 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 		*y_loc = *y_loc-origo_y;
 		*y_loc = *y_loc/(1<<(numOfLayers-layerNr));
 	}
+
+	/*void AdaptiveGrid::calcVortFromStream(){
+
+		const int N = grid->len;
+
+		//Define the size of the current grid in a CUDA format
+		dim3 block_size_1d(N);
+		dim3 grid_size_1d((N+THREADS_PER_BLOCK-1)/THREADS_PER_BLOCK);
+
+
+	}*/
 
 
 #ifndef UNITTESTING

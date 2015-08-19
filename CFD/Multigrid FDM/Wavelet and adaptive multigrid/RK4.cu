@@ -80,18 +80,20 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
     }
     std::cout<<"multigrid 3 \n";
 	adaptive_multigrid(k3, origoArray, countTrue, LAYERS);
-
+	std::cout<<"LET S GO ! \n";
 	for (i = 0; i < countTrue; i++){
     	k4[i].stream += k3[i].stream*dt;
+    	std::cout<<" "<<k3[i].stream<<" ";
     	k4[i].vort += k3[i].vort*dt;
+    	std::cout<<" "<<k3[i].vort<<" ";
     }
     std::cout<<"multigrid 4 \n";
 	adaptive_multigrid(k4, origoArray, countTrue, LAYERS);
 
 	std::cout<<"summation in RK4 \n";
     for (i = 0; i < countTrue; i++){
-    	y_vector[i].vort += (dt/6.0f)*(k1[i].vort + 2.0f*k2[i].vort + 2*.0f*k3[i].vort + k4[i].vort);
-    	y_vector[i].stream += (dt/6.0f)*(k1[i].stream + 2.0f*k2[i].stream + 2*.0f*k3[i].stream + k4[i].stream);
+    	y_vector[i].vort += (dt/6.0f)*(k1[i].vort + 2.0f*k2[i].vort + 2.0f*k3[i].vort + k4[i].vort);
+    	y_vector[i].stream += (dt/6.0f)*(k1[i].stream + 2.0f*k2[i].stream + 2.0f*k3[i].stream + k4[i].stream);
     }
 
 	free(k1);

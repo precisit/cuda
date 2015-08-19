@@ -121,6 +121,8 @@ public:
 
 	void global2local(const int x_glo, const int y_glo, int* x_loc, int* y_loc );
 
+	//void calcVortFromStream();
+
 };
 
 #endif
