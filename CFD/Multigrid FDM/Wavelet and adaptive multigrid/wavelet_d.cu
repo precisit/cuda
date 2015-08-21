@@ -44,7 +44,7 @@ __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int s
 			true_kernel_y<<<grid, block>>>(matrix, idx, idy, step_in, step_new, row, colum, layer_new, layers);			
 		}
 
-		__syncthreads();
+		//__syncthreads();
 		
 		//if((matrix[idx*colum + idy].isPicked == true)){
 		if((matrix[idx*colum + idy].isPicked == true && matrix[idx*colum + idy+step].isPicked == true)){	
@@ -64,7 +64,7 @@ __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int s
 					}
 				}
 			}}
-			__syncthreads();
+			//__syncthreads();
 		/*	
 		if((matrix[idx*colum + idy].isPicked == true)){
 			if(matrix[idx*colum + idy].x_index_global < row -step){
@@ -87,7 +87,7 @@ __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int s
 	//cudaDeviceSynchronize();	
 }
 
-/*__global__ void true_kernel_x(Node* matrix, int idx, int idy, int step_in, int step, int row, int colum, int layer, int layers){
+__global__ void true_kernel_x(Node* matrix, int idx, int idy, int step_in, int step, int row, int colum, int layer, int layers){
 
 	if(layer > layers){
 		return;
@@ -130,7 +130,7 @@ __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int s
 					}
 				}
 			}}*/
-			/*__syncthreads();
+			__syncthreads();
 			
 		if((matrix[idx*colum + idy].isPicked == true) && (matrix[(idx+step)*colum + idy].isPicked == true)){
 			if(matrix[idx*colum + idy].x_index_global < row -step){
@@ -147,11 +147,11 @@ __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int s
 					}
 				}
 			}			
-		}*/				
+		}			
 	
 
 	//cudaDeviceSynchronize();		
-//}*/
+}
 
 
 
@@ -180,7 +180,7 @@ __global__ void wavelet_d_kernal(Node* matrix, Node* array, int row, int colum, 
 	dim3 grid = (1);
 	true_kernel_y<<<grid,block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);	
 	__syncthreads();
-	//true_kernel_x<<<grid,block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);
+	true_kernel_x<<<grid,block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);
 }	
 
 
@@ -265,7 +265,7 @@ void wavelet_decompression(Node* array, Node* matrix, int *countTrue){
 	
 	//dim3 blockDim(*countTrue);
 	dim3 blockDim(row, colum);
-	dim3 gridDim(1,1);
+	dim3 gridDim(10,10);
 
 std::cout<<*countTrue<<std::endl;
 

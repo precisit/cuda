@@ -173,7 +173,7 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 
 	
 
-	/*for (int i=1; i<=layers; i++){			
+	for (int i=1; i<=layers; i++){			
 
 		float p1 = matrix[idx*colum + idy].vort;
 		float p2 = matrix[idx*colum + idy + step].vort;
@@ -199,7 +199,7 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 					}
 					/*isPicked = 1;
 					layer = i;
-					x = true;
+					x = true;*/
 					
 				}
 			}
@@ -221,7 +221,7 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 					}
 					/*isPicked = 1;
 					layer = i;
-					x = true;
+					x = true;*/
 						
 				}
 			}
@@ -230,10 +230,10 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 		
 		/*if(x == true){
 			break;
-		}
-		step = step*2;*/
+		}*/
+		step = step*2;
 	
-	//}
+	}
 
 	//if(x == true){
 	//	countTrue = 5;
