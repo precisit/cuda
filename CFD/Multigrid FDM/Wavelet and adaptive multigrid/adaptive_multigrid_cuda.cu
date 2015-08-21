@@ -94,6 +94,21 @@ __device__ datatype __BC_Function(const int x, const int y, const int maxLayer, 
 	//This needs to be fixed for the corners and stuff. FIX!
 	if (y == maxGlobIndex)
 	{
+		return 0.0f;
+	}
+	else if(y == 0){
+		return 0.0f;
+	}
+	else{
+		return 0.0f;
+	}
+}
+
+__device__ datatype __BC_FunctionVort(const int x, const int y, const int maxLayer, const int maxGlobIndex){
+
+	//This needs to be fixed for the corners and stuff. FIX!
+	if (y == maxGlobIndex)
+	{
 		return 1.0f;
 	}
 	else if(y == 0){
@@ -269,7 +284,6 @@ void setupBoundaryOnCoarsestGrid(Node* bc, const int len , func_def BC_Function)
 		bc[counter].stream = BC_Function(x,y);
 		counter++;
 	}
-
 }
 
 #ifdef OLDCODE
@@ -345,6 +359,14 @@ __global__ void copy(Node* to, const Node* from, const int len){
 	}
 }
 
+__global__ void copyVort(Node* to, const Node* from, const int len){
+	const int i = threadIdx.x + blockIdx.x*blockDim.x;
+
+	if( i < len ){
+		to[i].vort = from[i].vort;
+	}
+}
+
 __global__ void subtract_gpu(Node* a, const Node* b, const Node* c, const int len){
 	//a = b - c
 	const int i = threadIdx.x + blockIdx.x*blockDim.x;
@@ -380,7 +402,19 @@ __device__ datatype findNodeVal(const Node* arr, const int x, const int y, const
 			return arr[i].stream;
 		}
 	}
-	printf("			SOMETHING HAS FUCKED UP!");
+	printf("			SOMETHING HAS FUCKED UP! (stream edition)");
+	return 0.0f;
+}
+
+__device__ datatype findNodeValVort(const Node* arr, const int x, const int y, const int n){
+	for (int i = 0; i < n; ++i)
+	{
+		if (arr[i].x_index == x && arr[i].y_index == y)
+		{
+			return arr[i].vort;
+		}
+	}
+	printf("			SOMETHING HAS FUCKED UP (vort edition)!");
 	return 0.0f;
 }
 
@@ -574,19 +608,35 @@ __global__ void setVectorsToZero(Node * arr, const int len){
 	}
 }
 
+__global__ void dev_updateBFromVort(Node* b, Node* u, const int len){
+	const int id = threadIdx.x + blockIdx.x * blockDim.x;
+	if (id < len)
+	{
+		b[id].stream += -u[id].vort;
+	}
+}
+
+
+#define THREADS_PER_BLOCK 17
+
 void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, const int maxGlobIndex, const int maxLayerNr){
 
+	const int N = grid->len;
+	const int N_coarse = grid->coarserGrid->len;
+
 	//Define the size of the current grid in a CUDA format
-	dim3 block_size_1d(grid->len);
+	dim3 block_size_1d(N);
+	dim3 grid_size_1d((N+THREADS_PER_BLOCK-1)/THREADS_PER_BLOCK);
 
 	//And the same for the coarser grid.
-	dim3 block_size_1d_coarse(grid->coarserGrid->len);
+	dim3 block_size_1d_coarse(N_coarse);
+	dim3 grid_size_1d_coarse((N_coarse+THREADS_PER_BLOCK-1)/THREADS_PER_BLOCK);
 
 	//Pre-smoothing
 	for (int i = 0; i < k*pre/2 + 1; ++i)
 	{
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->u, grid->d, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->d, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+		jacobiSmootherLaplacianStream<<<grid_size_1d, block_size_1d>>>( grid->u, grid->d, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+		jacobiSmootherLaplacianStream<<<grid_size_1d, block_size_1d>>>( grid->d, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
 	}
 
 	//std::cout<<"  1  "<<std::endl;
@@ -594,22 +644,22 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, const 
 
 	//Calculate error
 	//d = f-L*u;
-	calculateErrorLaplacian<<<1, block_size_1d>>>(grid->b, grid->u, grid->d, grid->len, grid->h, maxGlobIndex, grid->layerNr, maxLayerNr);
+	calculateErrorLaplacian<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->d, grid->len, grid->h, maxGlobIndex, grid->layerNr, maxLayerNr);
 
 	//std::cout<<"  2  "<<std::endl;
 	ERRORCHECK();
 
 	//Restrict d
-	restrictMat<<<1, block_size_1d>>>(grid->coarserGrid->d, grid->coarserGrid->len, grid->d , grid->len ); 
+	restrictMat<<<grid_size_1d, block_size_1d>>>(grid->coarserGrid->d, grid->coarserGrid->len, grid->d , grid->len ); 
 	
 	//Restrict u
-	restrictMat<<<1, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->len, grid->u , grid->len ); 
+	restrictMat<<<grid_size_1d, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->len, grid->u , grid->len ); 
 
 	//Calculate the right hand side b for the next layer.
 	//calculateRHS<<<1, block_size_1d_coarse>>>(grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->coarserGrid->len, grid->coarserGrid->h, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr);
 
 	//Copy u to w.
-	copy<<<1, block_size_1d>>>(grid->coarserGrid->w, grid->coarserGrid->u, grid->coarserGrid->len);
+	copy<<<grid_size_1d, block_size_1d>>>(grid->coarserGrid->w, grid->coarserGrid->u, grid->coarserGrid->len);
 
 
 	//std::cout<<"  3  "<<std::endl;
@@ -621,8 +671,8 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, const 
 		//"Solves" the coarse system. This should probably be something
 		//better than a Jacobi smoother. OPT!
 	    for (int iter = 0; iter < sol/2 + 1 ; iter++){
-			jacobiSmootherLaplacianStream<<<1, block_size_1d_coarse>>>( grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->h, grid->coarserGrid->len, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr );
-			jacobiSmootherLaplacianStream<<<1, block_size_1d_coarse>>>( grid->coarserGrid->d, grid->coarserGrid->u, grid->coarserGrid->b, grid->h, grid->coarserGrid->len, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr );
+			jacobiSmootherLaplacianStream<<<grid_size_1d_coarse, block_size_1d_coarse>>>( grid->coarserGrid->u, grid->coarserGrid->d, grid->coarserGrid->b, grid->h, grid->coarserGrid->len, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr );
+			jacobiSmootherLaplacianStream<<<grid_size_1d_coarse, block_size_1d_coarse>>>( grid->coarserGrid->d, grid->coarserGrid->u, grid->coarserGrid->b, grid->h, grid->coarserGrid->len, maxGlobIndex, grid->coarserGrid->layerNr, maxLayerNr );
 		}
 	}
 	else{
@@ -632,33 +682,34 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, const 
 	//std::cout<<"  4  "<<std::endl;
 	ERRORCHECK();
 
-	subtract_gpu<<<1, block_size_1d_coarse>>>(grid->coarserGrid->d, grid->coarserGrid->u, grid->coarserGrid->w, grid->coarserGrid->len);
+	subtract_gpu<<<grid_size_1d_coarse, block_size_1d_coarse>>>(grid->coarserGrid->d, grid->coarserGrid->u, grid->coarserGrid->w, grid->coarserGrid->len);
 
 	//std::cout<<"  5  "<<std::endl;
 	ERRORCHECK();
-	interpolate<<<1, block_size_1d>>>( grid->d, grid->coarserGrid->d, grid->len, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h, grid->b);
+	interpolate<<<grid_size_1d, block_size_1d>>>( grid->d, grid->coarserGrid->d, grid->len, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h, grid->b);
 
 	//std::cout<<"  6  "<<std::endl;
 	ERRORCHECK();
 	//std::cout<<"  7  "<<std::endl;
 
-	add_gpu<<<1, block_size_1d>>>(grid->w, grid->d, grid->len);
+	add_gpu<<<grid_size_1d, block_size_1d>>>(grid->w, grid->d, grid->len);
 
 	//Copy u from w
-	copy<<<1, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->w, grid->coarserGrid->len);
+	copy<<<grid_size_1d, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->w, grid->coarserGrid->len);
 
 	//update b
-	setVectorsToZero<<<1, block_size_1d>>>(grid->b, grid->len);
-	dev_updateBFromBoundary<<<1, block_size_1d>>>(grid->b, grid->u, grid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
-	updateBFromInterpolation<<<1, block_size_1d>>>(grid->b, grid->u, grid->len, grid->coarserGrid->u, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
+	setVectorsToZero<<<grid_size_1d, block_size_1d>>>(grid->b, grid->len);
+	dev_updateBFromBoundary<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
+	dev_updateBFromVort<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len);
+	updateBFromInterpolation<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len, grid->coarserGrid->u, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
 
 	//Post-smoothing
 	for (int i = 0; i < k*post/2 + 1; ++i)
 	{
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
-		jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->u, grid->w, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+		jacobiSmootherLaplacianStream<<<grid_size_1d, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+		jacobiSmootherLaplacianStream<<<grid_size_1d, block_size_1d>>>( grid->u, grid->w, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
 	}
-	jacobiSmootherLaplacianStream<<<1, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
+	jacobiSmootherLaplacianStream<<<grid_size_1d, block_size_1d>>>( grid->w, grid->u, grid->b, grid->h, grid->len, maxGlobIndex, grid->layerNr, maxLayerNr);
 }
 
 __global__ void printAll(Node * arr, const int len){
@@ -683,27 +734,47 @@ void move2gpu(AdaptiveGrid * grid){
 
 	dim3 block_size_1d(grid->len);
 
+	/*Node* tmp, *tmp2;
+	std::cout<<"before \n";
+	std::cout<<"node size: "<<sizeof(Node)<<"\n";
+	cudaMalloc(&tmp,0);
+	std::cout<<"middle \n";
+
+	//cudaMalloc(&tmp2,1);
+	//assert(0);
+	*/
+	std::cout<<"grid len: "<<grid->len<<" \nlen*sizeofNode: "<<grid->len*sizeof(Node)<<std::endl;
+
 	cudaMalloc( (void**) &u_dev, grid->len*sizeof(Node));
+	std::cout<<" test 1 \n";
 	cudaMalloc( (void**) &b_dev, grid->len*sizeof(Node));
+	std::cout<<" test 2 \n";
 	cudaMalloc( (void**) &w_dev, grid->len*sizeof(Node));
+	std::cout<<" test 3 \n";
 	cudaMalloc( (void**) &d_dev, grid->len*sizeof(Node));
+
+	std::cout<<"1\n";
 
 	cudaMemcpy( u_dev, grid->u, sizeof(Node)*grid->len, cudaMemcpyHostToDevice);
 	cudaMemcpy( b_dev, grid->b, sizeof(Node)*grid->len, cudaMemcpyHostToDevice);
 	cudaMemcpy( w_dev, grid->w, sizeof(Node)*grid->len, cudaMemcpyHostToDevice);
 	cudaMemcpy( d_dev, grid->d, sizeof(Node)*grid->len, cudaMemcpyHostToDevice);
 
-	
+	std::cout<<"2\n";
 
 	free(grid->u);
 	free(grid->b);
 	free(grid->w);
 	free(grid->d);
 
+	std::cout<<"3\n";
+
 	grid->u = u_dev;
 	grid->w = w_dev;
 	grid->d = d_dev;
 	grid->b = b_dev;
+
+	std::cout<<"findNeighbours\n";
 
 	findNeighbours<<<1, block_size_1d>>>( grid->u, grid->len );
 	findNeighbours<<<1, block_size_1d>>>( grid->b, grid->len );
@@ -746,23 +817,188 @@ void move2host(AdaptiveGrid * grid){
 	grid->b = b_host;
 	ERRORCHECK();
 
-
 	std::cout<<"Moved data from the gpu."<<std::endl;
-
 }
 
-void adaptive_multigrid(Node* array, int* origoArray, int countTrue){
+
+bool isLeaf(Node* u, const int first, const int last, const int x_min, const int x_max, const int y_min, const int y_max){
+	for (int i = first; i <= last; ++i)
+	{
+		if (u[i].x_index_global <= x_max && u[i].x_index_global >= x_min && u[i].y_index_global <= y_max && u[i].y_index_global >= y_min)
+		{
+
+			return false;
+		}
+	}
+	return true;
+}
+
+void recursiveGridFill(Node* u, int layer, AdaptiveGrid** gridList, int* firstPtr, const int x_min, const int x_max, const int y_min, const int y_max, const float h){
+	int diff = (x_max-x_min)/2;
+
+	int *x_loc, *y_loc;
+	x_loc = (int*) calloc(1, sizeof(int));
+	y_loc = (int*) calloc(1, sizeof(int));
+
+	if (isLeaf(u, firstPtr[LAYERS - layer + 1], firstPtr[LAYERS], x_min, x_min+diff, y_min, y_min+diff) == false)
+	{
+		gridList[LAYERS - layer + 1]->global2local((x_min+diff/2), (y_min+diff/2),x_loc, y_loc);
+
+		Node tmp = Node(h*(x_min+diff)/2.0f, h*(y_min+diff)/2.0f, *x_loc, *y_loc,(x_min+diff/2), (y_min+diff/2), 0.0f, 0.0f, 0.0f );
+		gridList[LAYERS - layer + 1]->vec.push_back(tmp);
+		if (layer != 2)
+		{
+			recursiveGridFill(u, layer-1, gridList, firstPtr, x_min, x_min+diff, y_min, y_min+diff, h);
+		}
+	}
+
+	if (isLeaf(u, firstPtr[LAYERS - layer + 1], firstPtr[LAYERS], x_min+diff, x_min+2*diff, y_min, y_min+diff) == false)
+	{
+		gridList[LAYERS - layer + 1]->global2local((x_min+diff+diff/2), (y_min+diff/2),x_loc, y_loc);
+
+		Node tmp = Node(h*(x_min+diff)/2.0f, h*(y_min+diff)/2.0f, *x_loc, *y_loc,(x_min+diff+diff/2), (y_min+diff/2), 0.0f, 0.0f, 0.0f );
+		gridList[LAYERS - layer + 1]->vec.push_back(tmp);
+		if (layer != 2)
+		{
+			recursiveGridFill(u, layer-1, gridList, firstPtr,x_min+diff, x_min+2*diff, y_min, y_min+diff, h);
+		}
+	}
+
+	if (isLeaf(u, firstPtr[LAYERS - layer + 1], firstPtr[LAYERS], x_min+diff, x_min+2*diff, y_min+diff, y_min+2*diff) == false)
+	{
+		gridList[LAYERS - layer + 1]->global2local((x_min+diff+diff/2), (y_min+diff +diff/2),x_loc, y_loc);
+
+		Node tmp = Node(h*(x_min+diff)/2.0f, h*(y_min+diff)/2.0f, *x_loc, *y_loc,(x_min+diff+diff/2), (y_min+diff +diff/2), 0.0f, 0.0f, 0.0f );
+		gridList[LAYERS - layer + 1]->vec.push_back(tmp);
+		if (layer != 2)
+		{
+			recursiveGridFill(u, layer-1, gridList, firstPtr,  x_min+diff, x_min+2*diff, y_min+diff, y_min+2*diff, h);
+		}
+	}
+
+	if (isLeaf(u, firstPtr[LAYERS - layer + 1], firstPtr[LAYERS], x_min, x_min+diff, y_min+diff, y_min+2*diff) == false)
+	{
+		gridList[LAYERS - layer + 1]->global2local((x_min+diff/2), (y_min+diff+diff/2),x_loc, y_loc);
+
+		Node tmp = Node(h*(x_min+diff)/2.0f, h*(y_min+diff)/2.0f, *x_loc, *y_loc,(x_min+diff/2), (y_min+diff+diff/2), 0.0f, 0.0f, 0.0f );
+		gridList[LAYERS - layer + 1]->vec.push_back(tmp);
+		if (layer != 2)
+		{
+			recursiveGridFill(u, layer-1, gridList, firstPtr, x_min, x_min+diff, y_min+diff, y_min+2*diff, h);
+		}
+	}
+	free(y_loc);
+	free(x_loc);
+}
+
+__device__ bool isInterior(Node* arr, const int i){
+	return (arr[i].nodeRight != NULL && arr[i].nodeLeft != NULL && arr[i].nodeBelow != NULL && arr[i].nodeAbove != NULL);
+}
+
+__global__ void vortInterior(Node* to, Node* from, const int len, const datatype h){
+	const int id = threadIdx.x + blockDim.x*blockIdx.x;
+
+	if (id < len)
+	{
+		if (isInterior(from, id))
+		{
+			//This is slow and dumb and shared memory won't help until the memory gets a proper structure. OPT!
+			const datatype vort_dx2 = (findNodeValVort(from, from[id].x_index+1, from[id].y_index, len) + findNodeValVort(from, from[id].x_index-1, from[id].y_index, len) - 2.0f* from[id].vort)/(h*h);
+			const datatype vort_dy2 = (findNodeValVort(from, from[id].x_index, from[id].y_index+1, len) + findNodeValVort(from, from[id].x_index, from[id].y_index-1, len) -2.0f* from[id].vort)/(h*h);
+			//printf("Has anything fucked up? ");
+			const datatype stream_dx = (findNodeVal(from, from[id].x_index+1, from[id].y_index, len) - findNodeVal(from, from[id].x_index-1, from[id].y_index, len))/(2.0f*h);
+			//printf("Has anything fucked up? ");
+			const datatype stream_dy = (findNodeVal(from, from[id].x_index, from[id].y_index+1, len) - findNodeVal(from, from[id].x_index, from[id].y_index-1, len))/(2.0f*h);
+
+			const datatype vort_dx = (findNodeValVort(from, from[id].x_index+1, from[id].y_index, len) - findNodeValVort(from, from[id].x_index-1, from[id].y_index, len))/(2.0f*h);
+			const datatype vort_dy = (findNodeValVort(from, from[id].x_index, from[id].y_index+1, len) - findNodeValVort(from, from[id].x_index, from[id].y_index-1, len))/(2.0f*h);
+
+			to[id].vort = (vort_dy2+vort_dx2)/Re-stream_dy*vort_dx+stream_dx*vort_dy;
+		}
+	}
+}
+
+__global__ void vortExterior(Node* to, Node* from, const int len, const datatype h, const int maxGlobIndex){
+	const int id = threadIdx.x + blockDim.x*blockIdx.x;
+
+	if (id < len)
+	{
+		if (isInterior(from, id) == false)
+		{
+			if (is1StepFromBoundary(from, id, maxGlobIndex))
+			{
+				//printf(" ------------- ");
+				if (from[id].y_index_global == maxGlobIndex)
+				{
+					to[id].vort =  2.0f/(h*h)*(from[id].stream - findNodeVal(from, from[id].x_index, from[id].y_index-1, len))+1.0f;;
+				}
+				else if(from[id].y_index_global == 0){
+					to[id].vort =  2.0f/(h*h)*(from[id].stream - findNodeVal(from, from[id].x_index, from[id].y_index+1, len));
+				}
+				else if(from[id].x_index_global == maxGlobIndex){
+					to[id].vort =  2.0f/(h*h)*(from[id].stream - findNodeVal(from, from[id].x_index-1, from[id].y_index, len));
+				}
+				else if(from[id].x_index_global == 0){
+					to[id].vort =  2.0f/(h*h)*(from[id].stream - findNodeVal(from, from[id].x_index+1, from[id].y_index, len));
+				}
+				else{
+					printf("ooooooooooooooookej. Vort exterior is a little bit funky.");
+				}
+			}
+			else{
+				//Update according to a closest neigbour.
+				if (from[id].nodeRight == NULL)
+				{
+					to[id].vort = findNodeValVort(from, from[id].x_index-1, from[id].y_index, len);
+				}
+				else if(from[id].nodeBelow == NULL)
+				{
+					to[id].vort = findNodeValVort(from, from[id].x_index, from[id].y_index+1, len);
+				}
+				else if(from[id].nodeLeft == NULL)
+				{
+					to[id].vort = findNodeValVort(from, from[id].x_index+1, from[id].y_index, len);
+				}
+				else if (from[id].nodeAbove == NULL)
+				{
+					to[id].vort = findNodeValVort(from, from[id].x_index, from[id].y_index-1, len);
+				}
+				else{
+					printf("Something has gone wrong in vortExterior!\n");
+				}
+			}
+		}
+	}
+}
+
+void calcVortFromStream(AdaptiveGrid* grid){
+	const int N = grid->len;
+
+	//Define the size of the current grid in a CUDA format
+	dim3 block_size_1d(N);
+	dim3 grid_size_1d((N+THREADS_PER_BLOCK-1)/THREADS_PER_BLOCK);
+
+	//Updates the vorticity and puts the new values in w.
+	vortInterior<<<grid_size_1d, block_size_1d>>>(grid->w, grid->u, grid->len, grid->h);
+	vortExterior<<<grid_size_1d, block_size_1d>>>(grid->w, grid->u, grid->len, grid->h, 1<<LAYERS);
+
+	//
+	copyVort<<<grid_size_1d, block_size_1d>>>(grid->u, grid->w, grid->len);
+}
+
+void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int layers){
+
+	std::cout<<"hej\n";
 
 	int * pointsInLayer;
-	pointsInLayer = (int*) calloc(4, sizeof(int));
+	pointsInLayer = (int*) calloc(LAYERS+1, sizeof(int));
 
-	int bigCount = 0;
+	int bigCount = 1;
 
-	int tmpLayer = 4;
+	int tmpLayer = layers;
 	int counter = 0;
 
-	AdaptiveGrid** gridList;
-	gridList = (AdaptiveGrid**) malloc(4*sizeof(AdaptiveGrid*));
+
 
 	for(int i = 0; i<tmpLayer*2; i++){
 
@@ -770,6 +1006,7 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue){
 
 	}
 
+/*
 	//global2local
 	int idx = tmpLayer*2 -2;
 	int idy = idx +1;
@@ -783,7 +1020,7 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue){
 				array[i].x_index = (array[i].x_index_global - origoArray[idx])/ (1<<(j-1));
 				array[i].y_index = (array[i].y_index_global - origoArray[idy])/ (1<<(j-1));
 
-				std::cout<<"origo x: "<<origoArray[idx]<<" globalx: "<<array[i].x_index_global<<" Local: "<<array[i].x_index<<std::endl<<"origo y: "<<origoArray[idy]<<" globaly: "<<array[i].y_index_global<<" Local: "<<array[i].y_index<<std::endl;
+				//std::cout<<"origo x: "<<origoArray[idx]<<" globalx: "<<array[i].x_index_global<<" Local: "<<array[i].x_index<<std::endl<<"origo y: "<<origoArray[idy]<<" globaly: "<<array[i].y_index_global<<" Local: "<<array[i].y_index<<std::endl;
 			}
 		}
 
@@ -791,7 +1028,7 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue){
 		idy = idx +1;
 	}	
 
-
+*/
 	for (int i = 0; i < countTrue; ++i)
 	{
 
@@ -801,7 +1038,7 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue){
 		}
 		else{
 			pointsInLayer[bigCount] = counter;
-			counter = 1;
+			counter++;
 			tmpLayer = array[i].layer;
 			bigCount++;
 		}
@@ -812,59 +1049,128 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue){
 
 	for (int i = 0; i < 4; ++i)
 	{
-		std::cout<<"points: "<<pointsInLayer[i]<<std::endl;
+		//std::cout<<"points: "<<pointsInLayer[i]<<std::endl;
+	}
+
+	AdaptiveGrid** gridList;
+	gridList = (AdaptiveGrid**) malloc(layers*sizeof(AdaptiveGrid*));
+
+	std::cout<<"adaptive_multigrid\n";
+
+	//assert(0);
+	int pointCounter = 0;
+	for (int i = 1; i <= layers; ++i)
+	{
+		AdaptiveGrid* grid = new AdaptiveGrid(i,LAYERS, origoArray[2*(LAYERS-i)],origoArray[2*(LAYERS-i)+1], NULL, 0,1.0f/(1<<LAYERS));
+		pointCounter += pointsInLayer[i-1];
+		gridList[i-1] = grid;
+	}
+
+	for (int i = 0; i < 5; ++i)
+	{
+		gridList[0]->vec.push_back(array[i]);
+	}
+
+	recursiveGridFill(array, LAYERS, gridList, pointsInLayer, 0, row-1, 0, row-1, 1.0f/(1<<LAYERS));
+
+
+
+	for (int i = 0; i < LAYERS; ++i)
+	{
+		gridList[i]->setupFromVector();
 	}
 
 
 
 
 
-	//assert(0);
-	AdaptiveGrid grid1(1,4,origoArray[0],origoArray[1], &array[0], pointsInLayer[0], 0.5);
-	AdaptiveGrid grid2(2,4,origoArray[2],origoArray[3], &array[pointsInLayer[0]], pointsInLayer[1], 0.25);
-	AdaptiveGrid grid3(3,4,origoArray[4],origoArray[5], &array[pointsInLayer[0]+pointsInLayer[1]], pointsInLayer[2], 0.125);
-	AdaptiveGrid grid4(4,4,origoArray[6],origoArray[7], &array[pointsInLayer[0]+pointsInLayer[1]+pointsInLayer[2]], pointsInLayer[3], 0.125/2.0f);
 
-	grid2.coarserGrid = &grid1;
-	grid3.coarserGrid = &grid2;
-	grid4.coarserGrid = &grid3;
 
-	grid1.finerGrid = &grid2;
-	grid2.finerGrid = &grid3;
-	grid3.finerGrid = &grid4;
 
-	gridList[0] = &grid1;
-	gridList[1] = &grid2;
-	gridList[2] = &grid3;
-	gridList[3] = &grid4;
 
-	move2gpu(&grid1);
-	move2gpu(&grid2);
-	move2gpu(&grid3);
-	move2gpu(&grid4);
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+	std::cout<<"move2gpu\n";
+	for (int i = 0; i < LAYERS; ++i)
+	{
+		move2gpu(gridList[i]);
+		if(i>0)
+			gridList[i]->coarserGrid = gridList[i-1];
+		if(i<LAYERS-1)
+			gridList[i]->finerGrid = gridList[i+1];
+	}
 
 
 	for (int i = 0; i < 80; ++i)
 	{
+		//std::cout<<"muuuuuultigrid!\n";
 		//setVectorsToZero<<<1, grid1.len>>>(grid1.b, grid1.len);
-		dev_updateBFromBoundary<<<1, grid1.len>>>(grid1.b, grid1.u, grid1.len, grid1.layerNr, 4, 16, grid1.h);
-		multigrid_gpu(3, &grid4, 20, 40, 20, 16, 4);
+		dev_updateBFromBoundary<<<1, gridList[0]->len>>>(gridList[0]->b, gridList[0]->u, gridList[0]->len, gridList[0]->layerNr, 4, row-1, gridList[0]->h);
+		multigrid_gpu(layers-1, gridList[layers-1], 20, 40, 20, row-1, layers);
 
 	}
 
-	move2host(&grid1);
-	move2host(&grid2);
-	move2host(&grid3);
-	move2host(&grid4);
+	for (int i = 0; i < LAYERS; ++i)
+	{
+		calcVortFromStream(gridList[i]);	
+	}
+
+	for (int i = 0; i < LAYERS; ++i)
+	{
+		move2host(gridList[i]);
+	}
+
+	//move2host(&grid1);
+	//move2host(&grid2);
+	//move2host(&grid3);
+	//move2host(&grid4);
+
+	//assert(0);
+	
 
 	counter = 0;
-	for (int i = 0; i < 4; ++i)
+
+	for (int j = 0; j < countTrue; ++j)
 	{
-		for (int j = 0; j < pointsInLayer[i]; ++j)
-		{
-			array[counter] = gridList[i]->u[j];
-			counter++;
+		//std::cout<<"j "<<j<<"\n";
+		for(int lay=0; lay<LAYERS; lay++){
+			Node* tmp;
+
+			tmp = gridList[lay]->findGlobNodeGeneral(gridList[lay]->u, 
+				array[j].x_index_global, 
+				array[j].y_index_global, 
+				gridList[lay]->len);
+
+			//std::cout<<"lay "<<lay<<"\n";
+
+			if (tmp != NULL){
+				array[j].vort = tmp->vort;
+				break;
+			}
+			assert(lay != LAYERS-1);
 		}
+
+	}
+	
+
+	std::cout<<"free stuff in adaptive_multigrid_cuda.cu"<<std::endl;
+
+	for (int i = 0; i < LAYERS; ++i)
+	{
+		delete gridList[i];
 	}
 
 	free(gridList);

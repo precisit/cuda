@@ -549,7 +549,10 @@ public:
 			(I am aware that this function is extremely ad hoc, and all.
 			But it works, doesn't it?)
 		*/
-		assert(numberOfPoints == 5);
+		
+
+		std::cout<<"num points:"<<numberOfPoints<<std::endl;
+		//assert(numberOfPoints == 5);
 
 		pointsChosenByWavelet = (Node**) malloc(numberOfPoints*sizeof(Node*));
 		this->numOfPointsChosen = numberOfPoints;
@@ -558,17 +561,38 @@ public:
 		u = (Node*) malloc(9*sizeof(Node));
 		len = 9;
 
+		int *x_local, *y_local;
+		x_local = (int*) calloc(1, sizeof(int));
+		y_local = (int*) calloc(1, sizeof(int));
+
 		for (int i = 0; i < numberOfPoints; ++i)
 		{
 			pointsChosenByWavelet[i] = &savedNodes[i];
 			u[i] = savedNodes[i];
+			global2local(u[i].x_index_global, u[i].y_index_global, x_local, y_local);
+			u[i].x_index = *x_local;
+			u[i].y_index = *y_local;
 		}
-			
-
+		free(x_local);
+		free(y_local);
+		
 		int counter = numberOfPoints;
+		len = counter;
+
+		std::cout<<"lay_Nr: "<<layerNr<<std::endl;
+		std::cout<<"lay_Nr_max: "<<numOfLayers<<std::endl;
+		std::cout<<"origo_x: "<<origo_x<<std::endl;
+		std::cout<<"origo_y: "<<origo_y<<std::endl;
+		std::cout<<"counter (!): "<<counter<<std::endl;
+		for (int i = 0; i < 5; ++i)
+		{
+			std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
+			std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
+		}
 
 		//Start with node (0,1)
 		Node *tmpNodePtr;
+
 		for (int i = 0; i < numberOfPoints; ++i)
 		{
 			if(u[i].x_index == 0 && u[i].y_index == 0){
@@ -579,14 +603,23 @@ public:
 		}
 		Node tmp = *tmpNodePtr;
 		tmp.y_index++;
-		u[counter] = tmp;
-		counter++;
+		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
+		{
+			std::cout<<"test 1\n";
+			u[counter] = tmp;
+			counter++;
+		}		
 
 		//Then (1,0)
 		tmp = *tmpNodePtr;
 		tmp.x_index++;
-		u[counter] = tmp;
-		counter++;
+		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
+		{
+			std::cout<<"test 2\n";
+			u[counter] = tmp;
+			counter++;
+		}	
+
 
 		//Now (2,1)
 		for (int i = 0; i < numberOfPoints; ++i)
@@ -595,18 +628,43 @@ public:
 				tmpNodePtr = &u[i];
 				break;
 			}
-			assert(i != numberOfPoints -1);                                     
+			assert(i != numberOfPoints -1);
 		}
 		tmp = *tmpNodePtr;
 		tmp.y_index--;
-		u[counter] = tmp;
-		counter++;
+		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
+		{
+			std::cout<<"test 3\n";
+			u[counter] = tmp;
+			counter++;
+		}	
 
+		
 		//Then (1,2)
 		tmp = *tmpNodePtr;
 		tmp.x_index--;
-		u[counter] = tmp;
-		counter++;
+		std::cout<<"count "<<counter<<std::endl;
+
+		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
+		{
+			std::cout<<"test 4\n";
+			u[counter] = tmp;
+			counter++;
+		}	
+
+
+
+
+
+		for (int i = 0; i < 5; ++i)
+		{
+			std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
+			std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
+		}
+
+
+
+
 
 		//Make sure everyone finds thier neigbours.
 		for (int i = 0; i < counter+1; ++i)
@@ -628,8 +686,9 @@ public:
 				this->u[i].nodeBelow = findNode(u[i].x_index, u[i].y_index-1);
 			}
 		}
-
-		assert(len == counter);
+		std::cout<<"count "<<counter<<std::endl;
+		assert(9 == counter);
+		len = counter;
 		int *x_loc, *y_loc, *y_glo, *x_glo;
 		x_loc =(int*) malloc(sizeof(int));
 		y_loc =(int*) malloc(sizeof(int));
@@ -650,6 +709,7 @@ public:
 		free(y_loc);
 		free(x_glo);
 		free(y_glo);
+		//len = counter;
 		//std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 	}
 
@@ -681,6 +741,7 @@ public:
 		for (int i = 0; i < len; ++i)
 		{
 			if(arr[i].x_index == ind_x && arr[i].y_index == ind_y){
+				std::cout<<"i "<<i<<std::endl;
 				return &arr[i];
 				
 			}
@@ -688,6 +749,20 @@ public:
 		return NULL;
 
 	}		
+
+Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int ind_y, const int lenIn){
+
+		for (int i = 0; i < lenIn; ++i)
+		{
+			if(arr[i].x_index_global == ind_x && arr[i].y_index_global == ind_y){
+				return &arr[i];
+				
+			}
+		}
+		return NULL;
+
+	}	
+
 
 
 	void AdaptiveGrid::findNeighbours(Node * arr){
@@ -701,7 +776,48 @@ public:
 		}
 	}
 
+	int AdaptiveGrid::removeDumbPoints(Node* savedNodesIn, Node* savedNodes, const int numberOfPointsIn){
+		int counter = 0;
 
+		int x_mod = 0;
+		int y_mod = 0;
+		for (int i = 0; i < numberOfPointsIn; ++i)
+		{
+			x_mod = 0;
+			y_mod = 0;
+			assert( savedNodesIn[i].x_index_global != -1 && savedNodesIn[i].y_index_global != -1 );
+			if( (savedNodesIn[i].x_index_global %2) != (savedNodesIn[i].x_index_global %2 == 0) )
+			{
+				if ((savedNodesIn[i].x_index_global %2) == 1){
+					if(savedNodesIn[i].y_index_global>0){
+						y_mod = -1;
+					}
+					else{
+						y_mod = 1;
+					}
+				}
+				else{
+					if(savedNodesIn[i].x_index_global>0){
+						x_mod = -1;
+					}
+					else{
+						x_mod = 1;
+					}
+				}
+			}
+			
+			if (findGlobNodeGeneral(savedNodes, savedNodesIn[i].x_index_global+x_mod, savedNodesIn[i].y_index_global+y_mod, counter+1) == NULL)
+			{
+				savedNodes[counter] = savedNodesIn[i];
+				savedNodes[counter].x_index_global += x_mod;
+				savedNodes[counter].y_index_global += y_mod;
+				counter++;
+			}
+
+		}
+
+		return counter;
+	}
 
 	AdaptiveGrid::AdaptiveGrid(){
 		coarserGrid = NULL;
@@ -709,7 +825,7 @@ public:
 	}
 
 	AdaptiveGrid::AdaptiveGrid(const int layerIn, const int numLayersIn, const int origo_x_in, const int origo_y_in, 
-		Node* savedNodesIn , const int numberOfPointsIn, const datatype h_in){
+		Node* savedNodesIn, const int numberOfPointsIn, const datatype h_in){
 
 		this->h = h_in;
 
@@ -721,11 +837,79 @@ public:
 		this->origo_y = origo_y_in;
 		this->origo_x = origo_x_in;
 
+		if(numberOfPointsIn > 0){
+
+			Node* savedNodes;
+			savedNodes = (Node*) malloc(numberOfPointsIn*sizeof(Node));
+
+			int numberOfPoints = removeDumbPoints(savedNodesIn, savedNodes, numberOfPointsIn);
+			//free(savedNodesIn);
+
+			//assert(0);
+
+			if(this->layerNr == 1){
+				this->setupCoarsestGrid(savedNodes, numberOfPoints);
+			}
+			else{
+				this->setupGrid(savedNodes, numberOfPoints);
+			}
+
+			b = (Node*) calloc(len, sizeof(Node));
+			d = (Node*) calloc(len, sizeof(Node));
+			w = (Node*) calloc(len, sizeof(Node));
+
+			Node * u_tmp;
+			u_tmp = (Node*) malloc(len*sizeof(Node));
+
+			for (int i = 0; i < len; ++i)
+			{
+				u_tmp[i] = u[i];
+
+				b[i] = u[i];
+				b[i].stream = 0;
+				b[i].vort = 0;
+
+				d[i] = u[i];
+				d[i].stream = 0;
+				d[i].vort = 0;
+
+				w[i] = u[i];
+				w[i].stream = 0;
+				w[i].vort = 0;
+			}
+
+			free(u);
+			u = u_tmp;
+
+			findNeighbours(b);
+			findNeighbours(w);
+			findNeighbours(d);
+			findNeighbours(u);
+		}
+
+		boundaryIndex = (int*) malloc(1);
+		boundaryVals = (Node*) malloc(1);
+	}
+
+	void AdaptiveGrid::setupFromVector(){
+		int pointsInVec = this->vec.size();
+		Node* savedNodes;
+		savedNodes = (Node*) malloc(pointsInVec*sizeof(Node));
+		for (int i = 0; i < pointsInVec; ++i)
+		{
+			savedNodes[i] = this->vec[i];
+		}
+
+		//int numberOfPoints = removeDumbPoints(savedNodesIn, savedNodes, numberOfPointsIn);
+			//free(savedNodesIn);
+
+		//assert(0);
+
 		if(this->layerNr == 1){
-			this->setupCoarsestGrid(savedNodesIn, numberOfPointsIn);
+			this->setupCoarsestGrid(savedNodes, pointsInVec);
 		}
 		else{
-			this->setupGrid(savedNodesIn, numberOfPointsIn);
+			this->setupGrid(savedNodes, pointsInVec);
 		}
 
 		b = (Node*) calloc(len, sizeof(Node));
@@ -759,9 +943,6 @@ public:
 		findNeighbours(w);
 		findNeighbours(d);
 		findNeighbours(u);
-
-		boundaryIndex = (int*) malloc(1);
-		boundaryVals = (Node*) malloc(1);
 	}
 
 	Node AdaptiveGrid::interpolateGhostPointFromGlobal(int x_glo, int y_glo){
@@ -1006,6 +1187,32 @@ public:
 			b[i].stream = d[i].stream + sum;
 		}
 	}
+
+	void AdaptiveGrid::global2local(const int x_glo, const int y_glo, int* x_loc, int* y_loc ){
+		assert(this->layerNr > 0);
+		assert(this->layerNr <= this->numOfLayers);
+		assert(origo_x >= 0);
+		assert(origo_y >= 0);
+
+		*x_loc = x_glo;
+		*x_loc = *x_loc-origo_x;
+		*x_loc = *x_loc/(1<<(numOfLayers-layerNr));
+
+		*y_loc = y_glo;
+		*y_loc = *y_loc-origo_y;
+		*y_loc = *y_loc/(1<<(numOfLayers-layerNr));
+	}
+
+	/*void AdaptiveGrid::calcVortFromStream(){
+
+		const int N = grid->len;
+
+		//Define the size of the current grid in a CUDA format
+		dim3 block_size_1d(N);
+		dim3 grid_size_1d((N+THREADS_PER_BLOCK-1)/THREADS_PER_BLOCK);
+
+
+	}*/
 
 
 #ifndef UNITTESTING
