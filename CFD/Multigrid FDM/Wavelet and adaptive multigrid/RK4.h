@@ -1,7 +1,7 @@
 #ifndef RK4_H
 #define RK4_H
 
-#include "adaptive_multigrid_cuda.h"
+#include "adaptive_multigrid_cuda_new.h"
 #include "node.h"
 #include "parameters.h"
 

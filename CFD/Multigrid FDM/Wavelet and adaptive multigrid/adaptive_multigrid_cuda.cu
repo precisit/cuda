@@ -50,8 +50,8 @@ __device__ datatype getLaplacianStream(const Node * u, const int index1, const i
 	const int dist = abs_dev(u[index1].x_index - u[index2].x_index) +abs_dev(u[index1].y_index - u[index2].y_index);
 
 	if( dist > 1){
-		 	return 0.0f;
-		 }
+	 	return 0.0f;
+	}
     else{
 	    if(is1StepFromBoundary(u, index1, maxGlobIndex) || is1StepFromBoundary(u, index2, maxGlobIndex) ){
 	        if (dist == 0) {
@@ -89,15 +89,138 @@ __device__ datatype getLaplacianStream(const Node * u, const int index1, const i
 	}
 }
 
-__device__ datatype __BC_Function(const int x, const int y, const int maxLayer, const int maxGlobIndex){
+__device__ bool isInBoundaryNew(const Node* u, const int ind){
+	return u[ind].nodeRight == NULL || u[ind].nodeLeft == NULL || u[ind].nodeLeft == NULL || u[ind].nodeAbove == NULL;
+}
 
-	//This needs to be fixed for the corners and stuff. FIX!
+__device bool isVonNeumannBC(const int x, const int y){
+	return false; //FIX!
+}
+
+__device__ bool isOneStepIn(u, index1, index2){
+	const int x_diff = u[index1].x_index - u[index2].x_index;
+	const int y_diff = u[index1].y_index - u[index2].y_index;
+
+	if (x_diff == -1)
+	{
+		return u[index1].nodeLeft == NULL;
+	}
+	else if(x_diff == 1){
+		return u[index1].nodeRight == NULL;
+	}
+	else if(y_diff == -1){
+		return u[index1].nodeBelow == NULL;
+	}
+	else if(y_diff == 1){
+		return u[index1].nodeAbove == NULL;
+	}
+	else{
+		printf("Something's wrong. Check isOneStepIn-func!\n");
+		return false;
+	}
+}
+
+__device__ datatype getLaplacianStreamNew(const Node* u, const int index1, const int index2, const datatype h,
+	const int maxGlobIndex, const int layerNr, const int maxLayerNr){
+	//This function works for the new data structure in which the boundary points 
+	//are included in the grid itself. The nodes in the boundary are then heavily weighted 
+	//to make sure that they get the correct value.
+
+	const int dist = abs_dev(u[index1].x_index - u[index2].x_index) +abs_dev(u[index1].y_index - u[index2].y_index);
+
+	if( dist > 1){
+	 	return 0.0f;
+	}
+	else{
+		if(isInBoundaryNew(u, index1)){
+			if (u[index1].x_index_global == 0 || u[index1].x_index_global == maxGlobIndex || u[index1].y_index_global == 0 || u[index1].y_index_global == maxGlobIndex)
+			{
+				if(isVonNeumannBC(u[index1].x_index_global, u[index1].y_index_global ){
+					if (dist == 0)
+					{
+						return KAPPA/h;
+					}
+					else if( isOneStepIn(u, index1, index2) )
+					{
+						return -(u[index1].stream-u[index2].stream)/h;
+					}
+					else
+					{
+						return 0.0f;
+					}
+				}
+			}
+			//Only Dirichlev BC should matter here.
+			if(	dist == 0){
+				return KAPPA;
+			}
+			else{
+				return 0.0f;
+			}
+		}
+		else{
+			if( dist == 0 ){
+		 		return -4.0f/(h*h);
+		 	}
+			else{
+			 	return 1.0f/(h*h);
+			}
+		}
+	}
+}
+
+__global__ void updateBNew(const Node* u, Node* b, const Node* u_coarse, const int len, const int len_coarse, const int maxGlobIndex, const int layerNr){
+	const int id = threadIdx.x + blockDim.x*blockIdx.x;
+
+	if (id < len)
+	{
+		b[id].stream = 0.0f;
+		b[id].stream += -u[id].vort;
+		if (isInBoundaryNew(u, id))
+		{
+			if (u[id].x_index_global == 0 || u[id].x_index_global == maxGlobIndex || u[id].y_index_global == 0 || u[id].y_index_global == maxGlobIndex)
+			{
+				b[id].stream += KAPPA*__BC_Function(u[id].x_index_global, u[id].y_index_global, maxGlobIndex);
+			}
+			else{
+				int tmp_index = __findNodeGlobIdx(u_coarse, u[id].x_index_global, u[id].y_index_global, len_coarse);
+				if (tmp_index == -1)
+				{
+					if (u[id].nodeRight == NULL || u[id].nodeLeft == NULL)
+					{
+						int step = 1<<(LAYERS - layerNr);
+						b[id].stream += KAPPA*(__findNodeGlobStream(u_coarse, u[id].x_index_global, u[id].y_index_global+step, len_coarse)+
+							__findNodeGlobStream(u_coarse, u[id].x_index_global, u[id].y_index_global-step, len_coarse))/2.0f;
+					}
+					else if (u[id].nodeAbove == NULL || u[id].nodeBelow == NULL)
+					{
+						int step = 1<<(LAYERS - layerNr);
+						b[id].stream += KAPPA*(__findNodeGlobStream(u_coarse, u[id].x_index_global+step, u[id].y_index_global, len_coarse)+
+							__findNodeGlobStream(u_coarse, u[id].x_index_global-step, u[id].y_index_global, len_coarse))/2.0f;
+					}
+					else{
+						printf("updateBNew gives weird values.\n");
+					}
+
+				}
+				else{
+					b[id].stream += KAPPA*u_coarse[tmp_index];
+				}
+			}
+		}
+	}
+}
+
+__device__ datatype __BC_Function(const int x, const int y, const int maxGlobIndex){
+
+	//This function doesn't really care if it's a von Neumann or Dirichlet
+	//BC. But make sure to avoid mixed BCs.
 	if (y == maxGlobIndex)
 	{
-		return 0.0f;
+		return 1.0f;
 	}
 	else if(y == 0){
-		return 0.0f;
+		return -1.0f;
 	}
 	else{
 		return 0.0f;
@@ -130,6 +253,17 @@ __device__ int __findNodeGlobIdx(const Node* u, const int x, const int y, const 
 	}
 	return -1;
 
+}
+
+__device__ datatype __findNodeGlobStream(const Node* u, const int x, const int y, const int len){
+	for (int i = 0; i < len; ++i)
+	{
+		if (u[i].x_index_global == x && u[i].y_index_global)
+		{
+			return u[i].stream;
+		}
+	}
+	return -1;
 }
 
 __device__ int __pow_2(const datatype x){
@@ -442,12 +576,9 @@ __global__ void interpolate(Node* u_fine, const Node* u_coarse, const int len_fi
 
 		if (u_fine[i].nodeRight != NULL && isOnCoarserGrid == true)
 		{
-
-
 			datatype tmp_val = findNodeVal(u_fine, u_fine[i].x+2, u_fine[i].y, len_fine);
 			int tmp_idx = findNodeIdx(u_fine, u_fine[i].x+1, u_fine[i].y, len_fine);
 			u_fine[tmp_idx].stream = (tmp_val + u_fine[i].stream)/2.0f;
-
 		}
 
 		__syncthreads();
@@ -698,10 +829,11 @@ void multigrid_gpu(int k, AdaptiveGrid* grid, int pre, int sol, int post, const 
 	copy<<<grid_size_1d, block_size_1d>>>(grid->coarserGrid->u, grid->coarserGrid->w, grid->coarserGrid->len);
 
 	//update b
-	setVectorsToZero<<<grid_size_1d, block_size_1d>>>(grid->b, grid->len);
-	dev_updateBFromBoundary<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
-	dev_updateBFromVort<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len);
-	updateBFromInterpolation<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len, grid->coarserGrid->u, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
+	updateBNew<<<grid_size_1d, block_size_1d>>>(grid->u, grid->b, grid->coarserGrid->u, grid->len, grid->coarserGrid->len_coarse, maxGlobIndex);
+	//setVectorsToZero<<<grid_size_1d, block_size_1d>>>(grid->b, grid->len);
+	//dev_updateBFromBoundary<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
+	//dev_updateBFromVort<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len);
+	//updateBFromInterpolation<<<grid_size_1d, block_size_1d>>>(grid->b, grid->u, grid->len, grid->coarserGrid->u, grid->coarserGrid->len, grid->layerNr, maxLayerNr, maxGlobIndex, grid->h);
 
 	//Post-smoothing
 	for (int i = 0; i < k*post/2 + 1; ++i)
@@ -784,7 +916,6 @@ void move2gpu(AdaptiveGrid * grid){
 	ERRORCHECK();
 
 	std::cout<<"Moved data to the gpu."<<std::endl;
-
 }
 
 void move2host(AdaptiveGrid * grid){
@@ -1071,9 +1202,8 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int layers)
 		gridList[0]->vec.push_back(array[i]);
 	}
 
+	assert(row == colum);
 	recursiveGridFill(array, LAYERS, gridList, pointsInLayer, 0, row-1, 0, row-1, 1.0f/(1<<LAYERS));
-
-
 
 	for (int i = 0; i < LAYERS; ++i)
 	{
@@ -1133,14 +1263,6 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int layers)
 		move2host(gridList[i]);
 	}
 
-	//move2host(&grid1);
-	//move2host(&grid2);
-	//move2host(&grid3);
-	//move2host(&grid4);
-
-	//assert(0);
-	
-
 	counter = 0;
 
 	for (int j = 0; j < countTrue; ++j)
@@ -1162,9 +1284,7 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int layers)
 			}
 			assert(lay != LAYERS-1);
 		}
-
 	}
-	
 
 	std::cout<<"free stuff in adaptive_multigrid_cuda.cu"<<std::endl;
 
@@ -1177,50 +1297,3 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int layers)
 	free(pointsInLayer);
 
 }
-
-#ifdef OLDCODE
-#ifndef UNITTESTING
-int main(int argc, char const *argv[])
-{
-
-	Node* fromWavelet;
-	fromWavelet = (Node*) malloc((5+3+2)*sizeof(Node));
-
-	//datatype h = 0.125f;
-
-	fromWavelet[0] = Node(0.0f, 0.0f, 0,0, 1.0f, 1.0f, 1.0f);
-	fromWavelet[1] = Node(0.0f, 1.0f, 0,2, 1.0f, 1.0f, 1.0f);
-	fromWavelet[2] = Node(1.0f, 0.0f, 2,0, 1.0f, 1.0f, 1.0f);
-	fromWavelet[3] = Node(1.0f, 1.0f, 2,2, 1.0f, 1.0f, 1.0f);
-	fromWavelet[4] = Node(0.5f, 0.5f, 1,1, 1.0f, 1.0f, 1.0f);
-
-	AdaptiveGrid grid = AdaptiveGrid(1,3,0,0, &fromWavelet[0], 5, 0.5f); 
-	//AdaptiveGrid *dev_grid;
-	//cudaMalloc( (void**) &dev_grid, sizeof(AdaptiveGrid));
-	//cudaMemcpy(dev_grid, &grid, sizeof(AdaptiveGrid), cudaMemcpyHostToDevice);
-
-	Node *dev_u;
-	cudaMalloc( (void**) &(dev_u), 9*sizeof(Node));
-	//dev_grid->u = dev_u;
-	std::cout<<dev_u<<std::endl;
-	grid.u = dev_u;
-	std::cout<<grid.u<<std::endl;
-	test2<<<1,3>>>(grid.u);
-
-	//test<<<1,4>>>(dev_grid);	
-
-	Node *host_u;
-	host_u = (Node*) calloc(9, sizeof(Node));
-
-	cudaMemcpy(host_u, grid.u, sizeof(Node)*9, cudaMemcpyDeviceToHost);
-	//assert(0);
-
-
-	std::cout<<host_u[0].stream<<std::endl;
-
-	cudaFree(dev_u);
-	free(fromWavelet);
-	return 0;
-}
-#endif
-#endif
