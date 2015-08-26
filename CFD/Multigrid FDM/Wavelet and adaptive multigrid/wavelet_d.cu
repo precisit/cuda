@@ -23,6 +23,8 @@ __device__ int pow(int layer, int steplen){
 
 __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int step, int row, int colum, int layer, int layers){
 
+	float vort;
+
 	if(layer > layers){
 		return;
 	}	
@@ -41,53 +43,43 @@ __global__ void true_kernel_y(Node* matrix, int idx, int idy, int step_in, int s
 		if(layer == layers-1){
 
 			cudaDeviceSynchronize();
-			true_kernel_y<<<grid, block>>>(matrix, idx, idy, step_in, step_new, row, colum, layer_new, layers);			
+			//true_kernel_y<<<grid, block>>>(matrix, idx, idy, step_in, step_new, row, colum, layer_new, layers);			
 		}
 
-		//__syncthreads();
 		
+		if((matrix[idx*colum + idy].isPicked == 0)){
 		//if((matrix[idx*colum + idy].isPicked == true)){
-		if((matrix[idx*colum + idy].isPicked == true && matrix[idx*colum + idy+step].isPicked == true)){	
+			if((matrix[idx*colum + idy+(step/2)].isPicked == 1) && (matrix[idx*colum + idy-(step/2)].isPicked == 1)){	
 
-			if(matrix[idx*colum + idy].y_index_global < colum -step){
+				if(matrix[idx*colum + idy].y_index_global < (colum -(step/2))){
 
-				if(matrix[idx*colum + idy].y_index_global % step == 0){ 
+					if((matrix[idx*colum + idy+(step/2)].y_index_global % step) == 0){ 
 
 					//if((matrix[idx*colum + idy+(step/2)].isPicked == false)){
-					if((matrix[idx*colum + idy+(step/2)].isPicked == false)){
+					//if((matrix[idx*colum + idy+(step/2)].isPicked == 0)){
 
-						matrix[idx*colum + idy+(step/2)].vort = interpolDotEdge(matrix[idx*colum + idy].vort, matrix[idx*colum + idy+step].vort);
-				
-						matrix[idx*colum + idy+(step/2)].isPicked = true;
-						//atomicExch(&matrix[idx*colum + idy+(step/2)].isPicked, 1);
+						
+						vort = interpolDotEdge(matrix[idx*colum + idy+(step/2)].vort, matrix[idx*colum + idy-(step/2)].vort);
+						atomicExch(&matrix[idx*colum + idy].vort, vort); 
+						//matrix[idx*colum + idy+(step/2)].isPicked = true;
+						atomicExch(&matrix[idx*colum + idy].isPicked, 1);
+					
 				
 					}
 				}
-			}}
-			//__syncthreads();
-		/*	
-		if((matrix[idx*colum + idy].isPicked == true)){
-			if(matrix[idx*colum + idy].x_index_global < row -step){
-		
-				if ((matrix[idx*colum + idy].x_index_global % step == 0)){			
-				
-					//if((matrix[(idx+(step/2))*colum + idy].isPicked == false)){
-					if((matrix[(idx+(step/2))*colum + idy].isPicked == false)){	
-
-						matrix[(idx+(step/2))*colum + idy].vort = interpolDotEdge(matrix[idx*colum + idy].vort, matrix[(idx+step)*colum + idy].vort);
-						matrix[(idx+(step/2))*colum + idy].isPicked = true;	
-										
-				
-					}
-				}
-			}			
-		}*/				
-	
+			}
+		}
+		__threadfence();
+		__syncthreads();
 
 	//cudaDeviceSynchronize();	
 }
 
+
+
 __global__ void true_kernel_x(Node* matrix, int idx, int idy, int step_in, int step, int row, int colum, int layer, int layers){
+
+	float vort;
 
 	if(layer > layers){
 		return;
@@ -107,49 +99,32 @@ __global__ void true_kernel_x(Node* matrix, int idx, int idy, int step_in, int s
 		if(layer == layers-1){
 
 			cudaDeviceSynchronize();
-			true_kernel_x<<<grid, block>>>(matrix, idx, idy, step_in, step_new, row, colum, layer_new, layers);			
+			//true_kernel_x<<<grid, block>>>(matrix, idx, idy, step_in, step_new, row, colum, layer_new, layers);			
 		}
 
-		/*__syncthreads();
 		
-		//if((matrix[idx*colum + idy].isPicked == true)){
-		if((matrix[idx*colum + idy].isPicked == true)){	
-
-			if(matrix[idx*colum + idy].y_index_global < colum -step){
-
-				if(matrix[idx*colum + idy].y_index_global % step == 0){ 
-
-					//if((matrix[idx*colum + idy+(step/2)].isPicked == false)){
-					if((matrix[idx*colum + idy+(step/2)].isPicked == false)){
-
-						matrix[idx*colum + idy+(step/2)].vort = interpolDotEdge(matrix[idx*colum + idy].vort, matrix[idx*colum + idy+step].vort);
-				
-						matrix[idx*colum + idy+(step/2)].isPicked = true;
-						//atomicExch(&matrix[idx*colum + idy+(step/2)].isPicked, 1);
-				
-					}
-				}
-			}}*/
-			__syncthreads();
-			
-		if((matrix[idx*colum + idy].isPicked == true) && (matrix[(idx+step)*colum + idy].isPicked == true)){
-			if(matrix[idx*colum + idy].x_index_global < row -step){
+		if((matrix[idx*colum + idy].isPicked == 0)){		
+			if((matrix[(idx+(step/2))*colum + idy].isPicked == 1) && (matrix[(idx-(step/2))*colum + idy].isPicked == 1)){
+				if(matrix[idx*colum + idy].x_index_global < (row -(step/2))){
 		
-				if ((matrix[idx*colum + idy].x_index_global % step == 0)){			
+					if ((matrix[(idx+(step/2))*colum + idy].x_index_global % step) == 0){			
 				
 					//if((matrix[(idx+(step/2))*colum + idy].isPicked == false)){
-					if((matrix[(idx+(step/2))*colum + idy].isPicked == false)){	
+					//if((matrix[(idx+(step/2))*colum + idy].isPicked == 0)){	
 
-						matrix[(idx+(step/2))*colum + idy].vort = interpolDotEdge(matrix[idx*colum + idy].vort, matrix[(idx+step)*colum + idy].vort);
-						matrix[(idx+(step/2))*colum + idy].isPicked = true;	
+						
+						vort = interpolDotEdge(matrix[(idx+(step/2))*colum + idy].vort, matrix[(idx-(step/2))*colum + idy].vort);
+						atomicExch(&matrix[idx*colum + idy].vort, vort); 
+						//matrix[(idx+(step/2))*colum + idy].isPicked = true;	
+						atomicExch(&matrix[idx*colum + idy].isPicked, 1);
 										
 				
 					}
 				}
 			}			
 		}			
-	
-
+		__threadfence();
+		__syncthreads();
 	//cudaDeviceSynchronize();		
 }
 
@@ -160,7 +135,7 @@ __global__ void true_kernel_x(Node* matrix, int idx, int idy, int step_in, int s
 
 
 
-__global__ void wavelet_d_kernal(Node* matrix, Node* array, int row, int colum, int countTrue, int layers, int step_in){
+__global__ void wavelet_d_kernal1(Node* matrix, Node* array, int row, int colum, int countTrue, int layers, int step_in){
 		
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int idy = threadIdx.y + blockIdx.y * blockDim.y;
@@ -173,15 +148,41 @@ __global__ void wavelet_d_kernal(Node* matrix, Node* array, int row, int colum, 
 		}
 	}
 
-	//free (array);		
+	free (array);
+		
 	__syncthreads();
-
+	
 	dim3 block = (1);
 	dim3 grid = (1);
-	true_kernel_y<<<grid,block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);	
+		
+	true_kernel_y<<<grid, block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);
+}
+
+__global__ void wavelet_d_kernal2(Node* matrix, Node* array, int row, int colum, int countTrue, int layers, int step_in){
+	
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	int idy = threadIdx.y + blockIdx.y * blockDim.y;
+	//__threadfence();
 	__syncthreads();
-	true_kernel_x<<<grid,block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);
-}	
+	dim3 block = (1);
+	dim3 grid = (1);
+
+	true_kernel_x<<<grid, block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);
+	__threadfence();
+	
+		
+	
+		/*if(layer == layers-1){
+
+			cudaDeviceSynchronize();
+			true_kernel_y<<<grid, block>>>(matrix, idx, idy, step_in, step_new, row, colum, layer_new, layers);			
+		}*/	
+
+		/*dim3 block = (1);
+		dim3 grid = (1);
+		true_kernel_y<<<grid,block>>>(matrix, idx, idy, step_in, 2, row, colum, 1, layers);*/	
+	__syncthreads();
+}		
 
 
 //int main(){
@@ -264,8 +265,8 @@ void wavelet_decompression(Node* array, Node* matrix, int *countTrue){
 
 	
 	//dim3 blockDim(*countTrue);
-	dim3 blockDim(row, colum);
-	dim3 gridDim(10,10);
+	dim3 blockDim(17/2, 17/2);
+	dim3 gridDim(5, 5);
 
 std::cout<<*countTrue<<std::endl;
 
@@ -275,11 +276,15 @@ for(int i = 0; i<*countTrue; i++){
 }
 
 
-	wavelet_d_kernal<<<gridDim, blockDim>>>(d_matrix, d_array, row, colum, *countTrue, layers, step); //storlek på de som ska komma tillbaka, vaktor med sparade värden
+	wavelet_d_kernal1<<<gridDim, blockDim>>>(d_matrix, d_array, row, colum, *countTrue, layers, step); //storlek på de som ska komma tillbaka, vaktor med sparade värden
 
 	cudaError_t err = cudaThreadSynchronize();
 	std::cout<<"Run kernel: \n" << cudaGetErrorString(err)<<std::endl;
 
+	wavelet_d_kernal2<<<gridDim, blockDim>>>(d_matrix, d_array, row, colum, *countTrue, layers, step);
+
+	err = cudaThreadSynchronize();
+	std::cout<<"Run kernel: \n" << cudaGetErrorString(err)<<std::endl;
 
 
 	if(cudaMemcpy(matrix, d_matrix, size, cudaMemcpyDeviceToHost) != cudaSuccess){
@@ -290,6 +295,12 @@ for(int i = 0; i<*countTrue; i++){
 		std::cout<< "Can't copy back to CPU 1!"<<std::endl;
 
 	}
+
+	err = cudaThreadSynchronize();
+	std::cout<<"Run kernel: \n" << cudaGetErrorString(err)<<std::endl;
+
+	cudaDeviceReset();
+	cudaThreadExit();
 
 	float vort;
 
@@ -319,7 +330,7 @@ for(int i = 0; i<*countTrue; i++){
                     
             printIsPicked = matrix[x*colum + y].isPicked;
             
-            if(printIsPicked == true){
+            if(printIsPicked == 1){
                 printf("1   ");
             }                       
                     
@@ -342,7 +353,7 @@ for(int i = 0; i<*countTrue; i++){
 
 	   	for (int j=0; j<colum; j++){
 
-	   		if (matrix[i*colum + j].isPicked == true){
+	   		if (matrix[i*colum + j].isPicked == 1){
 
 	   			*countTrue += 1;
 	   		}	    	

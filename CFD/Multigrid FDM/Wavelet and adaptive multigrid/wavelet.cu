@@ -8,12 +8,24 @@ __device__ bool cornerNode(Node* matrix, int idx, int idy, int row, int colum){
 	if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == 0){
 		return true;
 	}
+	/*else if (matrix[idx*colum + idy].x_index_global == ((row -1)/2) && matrix[idx*colum + idy].y_index_global == 0){
+		return true;
+	}*/
 	else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == 0){
 		return true;
 	}
+	/*else if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == ((colum -1)/2)){
+		return true;
+	}*/
 	else if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == (colum -1)){
 		return true;
 	}
+	/*else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == ((colum - 1)/2)){
+		return true;
+	}*/
+	/*else if (matrix[idx*colum + idy].x_index_global == ((row -1)/2) && matrix[idx*colum + idy].y_index_global == (colum - 1)){
+		return true;
+	}*/
 	else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == (colum - 1)){
 		return true;
 	}
@@ -188,7 +200,7 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 
 		if(matrix[idx*colum + idy].x_index_global < (row -step/2)){ 
 		
-			if (((matrix[idx*colum + idy].x_index_global - step/2) % step == 0)){ 		
+			if (((matrix[idx*colum + idy].x_index_global - step/2) % step) == 0){ 		
 			
 				if (interpolDot(p3, p4, p1, tol) == true){
 
@@ -210,7 +222,7 @@ __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int 
 					
 		if(matrix[idx*colum + idy].y_index_global < colum -step/2){
 
-			if((matrix[idx*colum + idy].y_index_global - step/2) % step == 0){			
+			if(((matrix[idx*colum + idy].y_index_global - step/2) % step) == 0){			
 
 				if (interpolDot(p5, p6, p1, tol) == true){
 
@@ -264,7 +276,7 @@ void wavelet_compression(Node* matrix, int* countTrue){				///*, Node* ordedNode
 	Node* matrix;*/
 	Node *d_matrix;	
 	
-	int *d_countTrue;
+	//int *d_countTrue;
 
 	const int size = row*colum* sizeof(Node);
 
@@ -304,11 +316,11 @@ void wavelet_compression(Node* matrix, int* countTrue){				///*, Node* ordedNode
 		assert(0);
 	}
 
-	if (cudaMalloc(&d_countTrue, sizeof(int)) != cudaSuccess){
+	/*if (cudaMalloc(&d_countTrue, sizeof(int)) != cudaSuccess){
 
 		std::cout<< "Can't allocate memory 2!"<<std::endl;
 		assert(0);
-	}
+	}*/
 
 	if(cudaMemcpy(d_matrix, matrix, size, cudaMemcpyHostToDevice) != cudaSuccess){
 
@@ -317,16 +329,17 @@ void wavelet_compression(Node* matrix, int* countTrue){				///*, Node* ordedNode
 		assert(0);
 	}
 
-	if(cudaMemcpy(d_countTrue, countTrue, sizeof(int), cudaMemcpyHostToDevice) != cudaSuccess){
+	/*if(cudaMemcpy(d_countTrue, countTrue, sizeof(int), cudaMemcpyHostToDevice) != cudaSuccess){
 
 		std::cout<< "Could not copy to GPU 2!"<<std::endl;
 		cudaFree(d_countTrue);
 		assert(0);
-	}
+	}*/
 
-
-	dim3 blockDim(row/2, colum/2);
-	dim3 gridDim(20, 20);
+	
+	
+	dim3 blockDim(row, colum);
+	dim3 gridDim(5, 5);
 
 	wavelet_kernal<<<gridDim, blockDim>>>(d_matrix, row, colum, tol, step, layers, *countTrue); //storlek på de som ska komma tillbaka, vaktor med sparade värden
 
@@ -406,7 +419,7 @@ void wavelet_compression(Node* matrix, int* countTrue){				///*, Node* ordedNode
 
    //Beräkna antal valda noder
 
- // *countTrue = 0;
+  *countTrue = 0;
 
    for (int i=0; i<row; i++){
 
@@ -487,7 +500,7 @@ void wavelet_compression(Node* matrix, int* countTrue){				///*, Node* ordedNode
 	//*count_in = countTrue;
 
 	cudaFree(d_matrix);
-	cudaFree(d_countTrue);
+	//cudaFree(d_countTrue);
 
 	//assert(0);
 
