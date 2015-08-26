@@ -8,12 +8,24 @@ __device__ bool cornerNode(Node* matrix, int idx, int idy, int row, int colum){
 	if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == 0){
 		return true;
 	}
+	/*else if (matrix[idx*colum + idy].x_index_global == ((row -1)/2) && matrix[idx*colum + idy].y_index_global == 0){
+		return true;
+	}*/
 	else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == 0){
 		return true;
 	}
+	/*else if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == ((colum -1)/2)){
+		return true;
+	}*/
 	else if (matrix[idx*colum + idy].x_index_global == 0 && matrix[idx*colum + idy].y_index_global == (colum -1)){
 		return true;
 	}
+	/*else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == ((colum - 1)/2)){
+		return true;
+	}*/
+	/*else if (matrix[idx*colum + idy].x_index_global == ((row -1)/2) && matrix[idx*colum + idy].y_index_global == (colum - 1)){
+		return true;
+	}*/
 	else if (matrix[idx*colum + idy].x_index_global == (row -1) && matrix[idx*colum + idy].y_index_global == (colum - 1)){
 		return true;
 	}
@@ -42,67 +54,217 @@ __device__ bool cornerNode(Node* matrix, int idx, int idy, int row, int colum){
  	else{return false;}
  }
 
-__global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int step, int layers){
+/*__global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int step, int layers, int countTrue){
+
 
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int idy = threadIdx.y + blockIdx.y * blockDim.y;
 
-		if (cornerNode(matrix, idx, idy, row, colum) == true){
-			matrix[idx*colum + idy].isPicked = true;
-			matrix[idx*colum + idy].layer = layers;
+	
 
-		}
+	if (cornerNode(matrix, idx, idy, row, colum) == true){
+		atomicExch(&matrix[idx*colum + idy].isPicked, 1);
+		atomicExch(&matrix[idx*colum + idy].layer, layers);
+		//matrix[idx*colum + idy].isPicked = 1;
+		//matrix[idx*colum + idy].layer = layers;
 
+	}
+	__syncthreads();
+	for (int i=1; i<=layers; i++){
 
-	for (int i=1; i<layers; i++){
+		int isPicked_x = 0;
+		int isPicked_y = 0;
+		int layer_x = 0;
+		int layer_y = 0; 
 
-		if(idx < row -step && idy < colum -step){
+		bool x = false;
+		bool y = false;
+
+		float p1 = matrix[idx*colum + idy].vort;
+		float p2 = matrix[idx*colum + idy + step].vort;
+		float p3 = matrix[(idx + step)*colum + idy].vort;
+		float p4 = matrix[idx*colum + idy + step/2].vort;
+		float p5 = matrix[(idx + step/2)*colum + idy].vort;
+
+		__syncthreads();
+
+		if(matrix[idx*colum + idy].x_index_global < row -step){ 
 		
-			if ((matrix[idx*colum + idy].x_index_global % step == 0) && (matrix[idx*colum + idy].y_index_global % step == 0)){
-
-			float p1 = matrix[idx*colum + idy].vort;
-			float p2 = matrix[idx*colum + idy + step].vort;
-			float p3 = matrix[(idx + step)*colum + idy].vort;
-			float p4 = matrix[idx*colum + idy + step/2].vort;
-			float p5 = matrix[(idx + step/2)*colum + idy].vort;
-			//float p4 = matrix[(idx + step)*colum + idy + step].vort;
-			//float p5 = matrix[(idx + step/2)*colum + idy + step/2].vort;
-		
+			if ((matrix[idx*colum + idy].x_index_global % step == 0)){ 		
 			
 				if (interpolDot(p1, p3, p5, tol) == true){
 
-					matrix[(idx + step/2)*colum + idy].isPicked = true;
-					matrix[(idx + step/2)*colum + idy].layer = i;	
+					isPicked_x = 1;
+					layer_x = i;
+					x = true;
+					
+					
+					//int atomicExch(int* matrix[(idx + step/2)*colum + idy].layer, int 1);
+					//matrix[(idx + step/2)*colum + idy].isPicked = true;
+					//matrix[(idx + step/2)*colum + idy].layer = i;	
 					
 				}
-		
-			
-		
+			}
+		}
 
-		//if(idy % step == 0){
-			
+		__syncthreads();				
+		
+		if(matrix[idx*colum + idy].y_index_global < colum -step){
+
+			if(matrix[idx*colum + idy].y_index_global % step == 0){			
 
 				if (interpolDot(p1, p2, p4, tol) == true){
 
-					matrix[idx*colum + idy + step/2].isPicked = true;
-					matrix[idx*colum + idy + step/2].layer = i;	
+					isPicked_y = 1;
+					layer_y = i;
+					y = true;
+
+					//atomicExch(&matrix[idx*colum + idy + step/2].isPicked, 1);					
+
+					//matrix[idx*colum + idy + step/2].isPicked = true;
+					//matrix[idx*colum + idy + step/2].layer = i;					
+					//atomicExch(&matrix[idx*c__syncthreads();olum + idy + step/2].layer, i);
 					
 				}
-
-			//}
-					
+			}
 		}
 
+		__syncthreads();	
+		
+		
+		step = step*2;
+
+	if(x == true){
+	atomicExch(&matrix[(idx + step/2)*colum + idy].isPicked, isPicked_x);
+	atomicExch(&matrix[(idx + step/2)*colum + idy].layer, layer_x);
+	}
+	__syncthreads();
+	if(y == true){
+	atomicExch(&matrix[idx*colum + idy + step/2].isPicked, isPicked_y);
+	atomicExch(&matrix[idx*colum + idy + step/2].layer, layer_y);
+	}	
+	__syncthreads();
+	}
+	
+					
+	
+
+}*/
+
+
+
+
+
+
+
+
+__global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int step, int layers, int countTrue){
+
+
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	int idy = threadIdx.y + blockIdx.y * blockDim.y;
+
+	/*int isPicked = 0;
+	int layer= 0;
+	bool x = false;
+	bool y = false;
+
+	Node* temp;*/
+
+	//cudaMalloc(&temp, row*colum);
+
+	if (cornerNode(matrix, idx, idy, row, colum) == true){
+		matrix[idx*colum + idy].isPicked = true;
+		matrix[idx*colum + idy].layer = layers;
+		//isPicked = 1;
+		//layer = layers;
+		//atomicExch(&matrix[idx*colum + idy].isPicked, 1);
+		//atomicExch(&matrix[idx*colum + idy].layer, layers);
+		//x = true;
+	}
 
 	
-		}		
 
+	for (int i=1; i<=layers; i++){			
+
+		float p1 = matrix[idx*colum + idy].vort;
+		float p2 = matrix[idx*colum + idy + step].vort;
+
+		float p3 = matrix[(idx + step/2)*colum + idy].vort;
+		float p4 = matrix[(idx - step/2)*colum + idy].vort;
+
+		float p5 = matrix[idx*colum + idy + step/2].vort;
+		float p6 = matrix[idx*colum + idy - step/2].vort;	
+
+	
+
+		if(matrix[idx*colum + idy].x_index_global < (row -step/2)){ 
+		
+			if (((matrix[idx*colum + idy].x_index_global - step/2) % step) == 0){ 		
+			
+				if (interpolDot(p3, p4, p1, tol) == true){
+
+					matrix[(idx)*colum + idy].isPicked = true;
+					
+					if(matrix[(idx)*colum + idy].layer == 0){
+						matrix[(idx)*colum + idy].layer = i;
+					}
+					/*isPicked = 1;
+					layer = i;
+					x = true;*/
+					
+				}
+			}
+		}
+
+		
+		
+					
+		if(matrix[idx*colum + idy].y_index_global < colum -step/2){
+
+			if(((matrix[idx*colum + idy].y_index_global - step/2) % step) == 0){			
+
+				if (interpolDot(p5, p6, p1, tol) == true){
+
+					matrix[(idx)*colum + idy].isPicked = true;
+					
+					if(matrix[(idx)*colum + idy].layer == 0){
+						matrix[(idx)*colum + idy].layer = i;
+					}
+					/*isPicked = 1;
+					layer = i;
+					x = true;*/
+						
+				}
+			}
+		}
+		
+		
+		/*if(x == true){
+			break;
+		}*/
 		step = step*2;
+	
 	}
+
+	//if(x == true){
+	//	countTrue = 5;
+	//}
+
+	//matrix[(idx)*colum + idy].isPicked = isPicked;
+	//matrix[(idx)*colum + idy].layer = layer;
+
+	//atomicExch(&matrix[(idx)*colum + idy].isPicked, isPicked);
+	//atomicExch(&matrix[(idx)*colum + idy].layer, layer);						
+	
+	//__syncthreads();
+
+
+
 }
 
 //int main(){
-void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int* countTrue){
+void wavelet_compression(Node* matrix, int* countTrue){				///*, Node* ordedNodelist, int* origoArray*/
 
 	/*const int row = 17;
 	const int colum = 17;
@@ -113,6 +275,8 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 			
 	Node* matrix;*/
 	Node *d_matrix;	
+	
+	//int *d_countTrue;
 
 	const int size = row*colum* sizeof(Node);
 
@@ -152,6 +316,12 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 		assert(0);
 	}
 
+	/*if (cudaMalloc(&d_countTrue, sizeof(int)) != cudaSuccess){
+
+		std::cout<< "Can't allocate memory 2!"<<std::endl;
+		assert(0);
+	}*/
+
 	if(cudaMemcpy(d_matrix, matrix, size, cudaMemcpyHostToDevice) != cudaSuccess){
 
 		std::cout<< "Could not copy to GPU 1!"<<std::endl;
@@ -159,13 +329,22 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 		assert(0);
 	}
 
+	/*if(cudaMemcpy(d_countTrue, countTrue, sizeof(int), cudaMemcpyHostToDevice) != cudaSuccess){
 
+		std::cout<< "Could not copy to GPU 2!"<<std::endl;
+		cudaFree(d_countTrue);
+		assert(0);
+	}*/
+
+	
+	
 	dim3 blockDim(row, colum);
-	dim3 gridDim(1, 1);
+	dim3 gridDim(5, 5);
 
-	wavelet_kernal<<<gridDim, blockDim>>>(d_matrix, row, colum, tol, step, layers); //storlek på de som ska komma tillbaka, vaktor med sparade värden
+	wavelet_kernal<<<gridDim, blockDim>>>(d_matrix, row, colum, tol, step, layers, *countTrue); //storlek på de som ska komma tillbaka, vaktor med sparade värden
 
 	cudaError_t err = cudaThreadSynchronize();
+	
 	std::cout<<"Run kernel: \n" << cudaGetErrorString(err)<<std::endl;
 
 	if(cudaMemcpy(matrix, d_matrix, size, cudaMemcpyDeviceToHost) != cudaSuccess){
@@ -177,6 +356,19 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 		assert(0);
 
 	}
+
+	cudaDeviceReset();
+	cudaThreadExit();
+
+	/*if(cudaMemcpy(countTrue, d_countTrue, sizeof(int), cudaMemcpyDeviceToHost) != cudaSuccess){
+		//err = cudaMemcpy(countTrue, d_countTrue, sizeof(int), cudaMemcpyDeviceToHost);
+		std::cout<<"Copy to CPU: \n" << cudaGetErrorString(err)<<std::endl;
+		delete[] countTrue;
+		cudaFree(d_countTrue);
+		std::cout<< "Can't copy back to CPU 1!"<<std::endl;
+		assert(0);
+
+	}*/
 
 
 	//for(int i=0; i<row*colum; i++){
@@ -227,7 +419,7 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 
    //Beräkna antal valda noder
 
-   *countTrue = 0;
+  *countTrue = 0;
 
    for (int i=0; i<row; i++){
 
@@ -308,10 +500,12 @@ void wavelet_compression(Node* matrix, Node* ordedNodelist, int* origoArray, int
 	//*count_in = countTrue;
 
 	cudaFree(d_matrix);
+	//cudaFree(d_countTrue);
 
 	//assert(0);
 
 
 	//delete[] matrix;	
 	//return ordedNodelist;
+
 }
