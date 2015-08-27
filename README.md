@@ -8,8 +8,8 @@ There are a few parameters of the code that are affecting the performance. These
 </p>
 
 <p>
-- How to compile: make
+> - How to compile: make
 </p>
 <p>
-- How to run: ./MrWags
+> - How to run: ./MrWags
 </p>
