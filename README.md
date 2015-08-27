@@ -4,11 +4,12 @@ Mr. Wags (MultiResolution Wavelet based AlGorithm Simulation) was PrecisIT's sum
 </p>
 
 <p>
-- How to compile: make
-
-- How to run: ./MrWags
+There are a few parameters of the code that are affecting the performance. These can be found in the parameters.h file. Each time one of them is changed a recompilatuion is required.
 </p>
 
 <p>
-There are a few parameters of the code that are affecting the performance. These can be found in the parameters.h file. Each time one of them is changed a recompilatuion is required.
+- How to compile: make
+</p>
+<p>
+- How to run: ./MrWags
 </p>
