@@ -5,6 +5,7 @@ Mr. Wags (MultiResolution Wavelet based AlGorithm Simulation) was PrecisIT's sum
 
 <p>
 - How to compile: make
+
 - How to run: ./MrWags
 </p>
 
