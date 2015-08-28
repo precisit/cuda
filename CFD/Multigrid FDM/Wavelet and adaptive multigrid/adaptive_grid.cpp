@@ -411,7 +411,6 @@ public:
 		*x_glo = *x_loc*(1<<(numOfLayers-layerNr))+this->origo_x;
 	}
 
-
 	void AdaptiveGrid::setupGrid(Node* savedNodes, const int numberOfPoints){
 		//free(pointsChosenByWavelet);
 		pointsChosenByWavelet = (Node**) malloc(numberOfPoints*sizeof(Node*));
@@ -453,7 +452,6 @@ public:
 				len++;
 				counter++;
 			}
-
 			//Up
 			if(isInGrid(savedNodes[i].x_index, savedNodes[i].y_index+1) == false){
 				Node tmpNode;
@@ -464,8 +462,7 @@ public:
 				len++;
 				counter++;
 			}
-
-			//down
+			//Down
 			if(isInGrid(savedNodes[i].x_index, savedNodes[i].y_index-1) == false){
 				Node tmpNode;
 				tmpNode = u[i];
@@ -550,13 +547,10 @@ public:
 			But it works, doesn't it?)
 		*/
 		
-
-		std::cout<<"num points:"<<numberOfPoints<<std::endl;
-		//assert(numberOfPoints == 5);
+		//std::cout<<"num points:"<<numberOfPoints<<std::endl;
 
 		pointsChosenByWavelet = (Node**) malloc(numberOfPoints*sizeof(Node*));
 		this->numOfPointsChosen = numberOfPoints;
-
 
 		u = (Node*) malloc(9*sizeof(Node));
 		len = 9;
@@ -579,16 +573,16 @@ public:
 		int counter = numberOfPoints;
 		len = counter;
 
-		std::cout<<"lay_Nr: "<<layerNr<<std::endl;
-		std::cout<<"lay_Nr_max: "<<numOfLayers<<std::endl;
-		std::cout<<"origo_x: "<<origo_x<<std::endl;
-		std::cout<<"origo_y: "<<origo_y<<std::endl;
-		std::cout<<"counter (!): "<<counter<<std::endl;
-		for (int i = 0; i < 5; ++i)
-		{
-			std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
-			std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
-		}
+		//std::cout<<"lay_Nr: "<<layerNr<<std::endl;
+		//std::cout<<"lay_Nr_max: "<<numOfLayers<<std::endl;
+		//std::cout<<"origo_x: "<<origo_x<<std::endl;
+		//std::cout<<"origo_y: "<<origo_y<<std::endl;
+		//std::cout<<"counter (!): "<<counter<<std::endl;
+		//for (int i = 0; i < 5; ++i)
+		//{
+		//	std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
+		//	std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
+		//}
 
 		//Start with node (0,1)
 		Node *tmpNodePtr;
@@ -605,7 +599,7 @@ public:
 		tmp.y_index++;
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
-			std::cout<<"test 1\n";
+			//std::cout<<"test 1\n";
 			u[counter] = tmp;
 			counter++;
 		}		
@@ -615,11 +609,10 @@ public:
 		tmp.x_index++;
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
-			std::cout<<"test 2\n";
+			//std::cout<<"test 2\n";
 			u[counter] = tmp;
 			counter++;
-		}	
-
+		}
 
 		//Now (2,1)
 		for (int i = 0; i < numberOfPoints; ++i)
@@ -634,7 +627,7 @@ public:
 		tmp.y_index--;
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
-			std::cout<<"test 3\n";
+			//std::cout<<"test 3\n";
 			u[counter] = tmp;
 			counter++;
 		}	
@@ -643,31 +636,23 @@ public:
 		//Then (1,2)
 		tmp = *tmpNodePtr;
 		tmp.x_index--;
-		std::cout<<"count "<<counter<<std::endl;
+		//std::cout<<"count "<<counter<<std::endl;
 
 		if (findNodeGeneral(u, tmp.x_index, tmp.y_index) == NULL)
 		{
-			std::cout<<"test 4\n";
+			//std::cout<<"test 4\n";
 			u[counter] = tmp;
 			counter++;
-		}	
-
-
-
-
-
-		for (int i = 0; i < 5; ++i)
-		{
-			std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
-			std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
 		}
 
-
-
-
+		//for (int i = 0; i < 5; ++i)
+		//{
+		//	std::cout<<"x_index: "<<u[i].x_index<<"  y_index: "<<u[i].y_index<<std::endl;
+		//	std::cout<<"x_index_glob: "<<u[i].x_index_global<<"  y_index_glob: "<<u[i].y_index_global<<std::endl;
+		//}
 
 		//Make sure everyone finds thier neigbours.
-		for (int i = 0; i < counter+1; ++i)
+		for (int i = 0; i < counter; ++i)
 		{
 			if(u[i].nodeLeft == NULL)
 			{
@@ -686,7 +671,7 @@ public:
 				this->u[i].nodeBelow = findNode(u[i].x_index, u[i].y_index-1);
 			}
 		}
-		std::cout<<"count "<<counter<<std::endl;
+		//std::cout<<"count "<<counter<<std::endl;
 		assert(9 == counter);
 		len = counter;
 		int *x_loc, *y_loc, *y_glo, *x_glo;
@@ -741,7 +726,7 @@ public:
 		for (int i = 0; i < len; ++i)
 		{
 			if(arr[i].x_index == ind_x && arr[i].y_index == ind_y){
-				std::cout<<"i "<<i<<std::endl;
+				//std::cout<<"i "<<i<<std::endl;
 				return &arr[i];
 				
 			}
@@ -767,7 +752,7 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 
 	void AdaptiveGrid::findNeighbours(Node * arr){
 		//Make sure everyone finds thier neigbours.
-		for (int i = 0; i < len; ++i)
+		for (int i = 0; i < len; ++i) 
 		{
 			arr[i].nodeLeft =  findNodeGeneral(arr, arr[i].x_index-1, arr[i].y_index);
 			arr[i].nodeRight = findNodeGeneral(arr, arr[i].x_index+1, arr[i].y_index);
@@ -886,9 +871,6 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 			findNeighbours(d);
 			findNeighbours(u);
 		}
-
-		boundaryIndex = (int*) malloc(1);
-		boundaryVals = (Node*) malloc(1);
 	}
 
 	void AdaptiveGrid::setupFromVector(){
@@ -1214,171 +1196,3 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 
 	}*/
 
-
-#ifndef UNITTESTING
-
-
-/*
-int main(int argc, char const *argv[])
-{
-	Node* fromWavelet;
-	fromWavelet = (Node*) malloc((5+3+2)*sizeof(Node));
-
-	datatype h = 0.125f;
-
-	fromWavelet[0] = Node(0.0f, 0.0f, 0,0, 1.0f, 1.0f, 1.0f);
-	fromWavelet[1] = Node(0.0f, 1.0f, 0,2, 1.0f, 1.0f, 1.0f);
-	fromWavelet[2] = Node(1.0f, 0.0f, 2,0, 1.0f, 1.0f, 1.0f);
-	fromWavelet[3] = Node(1.0f, 1.0f, 2,2, 1.0f, 1.0f, 1.0f);
-	fromWavelet[4] = Node(0.5f, 0.5f, 1,1, 1.0f, 1.0f, 1.0f);
-
-	fromWavelet[5]  = Node(0.25,0.25,1,1, 1.0f,0.1f,0.0f);
-	fromWavelet[6] = Node(0.25,0.75,1,3, 1.5f,0.2f,0.0f);
-	fromWavelet[7] = Node(0.75,0.75,3,3, 2.0f,0.3f,0.0f);
-
-	fromWavelet[8] = Node(0.125+0.25,0.5+0.125, 1,1, 0.1f,0.4f,0.0f);
-	fromWavelet[9] = Node(0.125+0.50,0.5+0.125, 3,1, 0.1f,0.5f,0.0f);
-
-	
-
-	AdaptiveGrid fine(3,3,2,4, &fromWavelet[8], 2, 4*h);
-	AdaptiveGrid middle(2,3,0,0, &fromWavelet[5], 3, 2*h);
-	AdaptiveGrid coarse(1,3,0,0, &fromWavelet[0], 5, h);
-
-	fine.coarserGrid = &middle;
-	middle.coarserGrid = &coarse;
-	//middle.setBoundaryLength();
-	//std::cout<<middle.lenOfBoundary<<std::endl;
-
-	std::cout<<std::endl;
-	for (int i = 0; i < coarse.len; ++i)
-	{
-		//std::cout<<std::endl;
-		//std::cout<<"u[i]: "<<coarse.u[i].x_index<<" ; "<<coarse.u[i].y_index<<std::endl;
-		//std::cout<<"u[i]: "<<coarse.u[i].x_index_global<<" ; "<<coarse.u[i].y_index_global<<std::endl;
-		//std::cout<<std::endl;
-	}
-	
-	
-	coarse.updateBoundaryCoarsestGrid();
-	middle.updateBoundary();
-	fine.updateBoundary();
-
-	//fine.setBoundaryLength();
-	//std::cout<<fine.lenOfBoundary<<std::endl;
-	//for (int i = 0; i < middle.len; ++i)
-	//{
-	//	std::cout<<"d[i]: "<<middle.d[i].x_index<<" ; "<<middle.d[i].y_index<<" , "<<middle.d[i].stream<<std::endl;
-	///}
-
-	//std::cout<<std::endl;
-
-	//for (int i = 0; i < fine.numOfPointsChosen; ++i)
-	//{
-	//	std::cout<<"u[i]: "<<fine.pointsChosenByWavelet[i]->x_index<<" ; "<<fine.pointsChosenByWavelet[i]->y_index<<" , "<<fine.pointsChosenByWavelet[i]->stream<<std::endl;
-	//}
-
-	for (int i = 0; i < 8; ++i)
-	{
-		multigrid(2,&fine, 5,10,5);
-
-	}
-	for (int i = 0; i < coarse.len; ++i)
-	{
-		std::cout<<"u[i]: "<<coarse.u[i].x_index<<" ; "<<coarse.u[i].y_index<<" , "<<coarse.u[i].stream<<std::endl;
-	}
-	std::cout<<std::endl;
-	for (int i = 0; i < middle.len; ++i)
-	{
-		std::cout<<"u[i]: "<<middle.u[i].x_index<<" ; "<<middle.u[i].y_index<<" , "<<middle.u[i].stream<<std::endl;
-	}
-
-
-	
-
-	
-	//middle.interpolateU(fine);
-
-	//std::cout<<"Fine: "<<std::endl;
-	//for (int i = 0; i < fine.len; ++i)
-	//{
-	//	std::cout<<"x:"<<fine.u[i].x_index<<", y:"<<fine.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
-	//}
-
-	//std::cout<<"Middle: "<<std::endl;
-	//for (int i = 0; i < middle.len; ++i)
-	//{
-	//	std::cout<<"x:"<<middle.u[i].x_index<<", y:"<<middle.u[i].y_index<<", vort:"<<middle.u[i].vort<<std::endl;
-	//}
-	
-
-	free(fromWavelet);
-
-	/*
-	//AdaptiveGrid grid;
-
-	//AdaptiveGrid coarse;
-	int coarse_n = 9;
-
-	int n = 21;
-
-	grid.u = (Node*) malloc(n*sizeof(Node));
-	grid.b = (Node*) malloc(n*sizeof(Node));
-	grid.h = 0.25f;
-
-	coarse.u = (Node*) malloc(coarse_n*sizeof(Node));
-	coarse.b = (Node*) malloc(coarse_n*sizeof(Node));
-	coarse.h = 0.5f;
-
-	int counter = 0;
-	for (int x = 0; x < 5; ++x)
-	 {
-	 	for (int y = 0; y < 5; ++y)
-	 	{
-	 		if(y>2 && x<2){
-	 			//do nothing
-	 		}
-	 		else{
-	 			grid.u[counter] = Node(grid.h*y, grid.h*y, x, y,0.1f,0.2f,0.3f);
-	 			counter++;
-	 		}
-	 	}
-	 } 
-	 grid.len = counter;
-	
-
-	 for (int i = 0; i < grid.len; ++i)
-	 {
-	 	grid.setB(i, 0.0f);
-	 }
-
-
-	 for (int i = 0; i < grid.len; ++i)
-	 {
-	 	std::cout<<grid.u[i].x_index << " ; " <<grid.u[i].y_index << " ; " <<grid.u[i].stream << "\n" ;
-	 }
-
-	//	grid.jacobiSmootherLaplacianStream();
-	//	grid.jacobiSmootherLaplacianStream();
-	//	grid.jacobiSmootherLaplacianStream();
-	//	grid.jacobiSmootherLaplacianStream();
-
-
-	//std::cout<<std::endl;
-	//for (int i = 0; i < grid.len; ++i)
-	// {
-	 //	std::cout<<grid.u[i].x_index << " ; " <<grid.u[i].y_index << " ; " <<grid.u[i].stream << "\n" ;
-	 //}
-
-
-	//free(grid.u);
-	//free(grid.b);
-
-	//free(coarse.u);
-	//free(coarse.b);
-	*/
-
-//	return 0;
-//}
-
-#endif

@@ -5,8 +5,10 @@
 
 //#include "node.h"
 
-#define datatype float
+#define datatype double
 #define Re 10.0f
+#define KAPPA 1000000.0f
+#define TOLERANCE 0.2f
 #define VORTSTREAM
 
 const int row = 17;

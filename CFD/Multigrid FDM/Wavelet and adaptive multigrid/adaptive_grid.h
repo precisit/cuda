@@ -72,25 +72,21 @@ public:
 
 	void interpolateU(AdaptiveGrid *fine);
 
-
 	void interpolateD(AdaptiveGrid *fine);
 
 	void findNeighboursD();
 
 	void findNeighboursU();
 
-
 	void setNeighbours();
 
 	void local2global(const int* x_loc, const int* y_loc, int* x_glo, int* y_glo );
-
 
 	void setupGrid(Node* savedNodes, const int numberOfPoints);
 
 	void setupCoarsestGrid(Node* savedNodes, const int numberOfPoints);
 
 	Node* findNodeGeneral(Node* arr, const int ind_x, const int ind_y);
-
 
 	void findNeighbours(Node * arr);
 
