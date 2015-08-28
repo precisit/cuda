@@ -77,4 +77,17 @@ void adaptive_multigrid(Node* array, int* origoArray, int countTrue, int LAYERS)
 
 __device__ datatype getLaplacianStreamNew(const Node* u, const int index1, const int index2, const datatype h, const int maxGlobIndex, const int layerNr, const int maxLayerNr);
 
+
+
+
+
+
+
+
+
+
+__global__ void u_test(Node* x, const int len);
+__global__ void findNeighbours2(Node* array, const int len );
+
+
 #endif

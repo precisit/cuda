@@ -10,11 +10,14 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
     int i;
     Node *k1, *k2, *k3, *k4;
 
+    std::cout<<"hej hopp!"<<std::endl;
+
     k1 = (Node*) malloc(countTrue*sizeof(Node));
 	k2 = (Node*) malloc(countTrue*sizeof(Node));
 	k3 = (Node*) malloc(countTrue*sizeof(Node));
 	k4 = (Node*) malloc(countTrue*sizeof(Node));
 
+	std::cout<<"hej hoppigen!"<<std::endl;
 
 	for (i = 0; i < countTrue; ++i)
 	{
@@ -24,7 +27,13 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
 		k4[i] = y_vector[i];
 	}
 
+	std::cout<<"hej hoppsan!"<<std::endl;
+
 	adaptive_multigrid_new(k1, origoArray, countTrue);
+
+	std::cout<<"nu får de va nog!!"<<std::endl;
+
+
     for (i = 0; i < countTrue; i++){
     	k2[i].stream += k1[i].stream*dt/2.0f;
     	k2[i].vort += k1[i].vort*dt/2.0f;
@@ -43,10 +52,9 @@ void RK4(datatype dt, Node* y_vector, int* origoArray, int countTrue) {
 
 	adaptive_multigrid_new(k4, origoArray, countTrue);
 
-	assert(row == colum);
 	for (i = 0; i < countTrue; i++){
-    	if ((y_vector[i].x_index_global == 0 || y_vector[i].y_index_global == 0 || y_vector[i].x_index_global == row-1 ||
-    	 y_vector[i].y_index_global == row-1) == false)
+    	if ((y_vector[i].x_index_global == 0 || y_vector[i].y_index_global == 0 || y_vector[i].x_index_global == LEN_OF_MATRIX-1 ||
+    	 y_vector[i].y_index_global == LEN_OF_MATRIX-1) == false)
     	{
     		y_vector[i].vort = (dt/6.0f)*(k1[i].vort + 2.0f*k2[i].vort + 2.0f*k3[i].vort + k4[i].vort);
     		

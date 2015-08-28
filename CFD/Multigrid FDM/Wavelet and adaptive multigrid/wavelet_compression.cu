@@ -196,6 +196,8 @@ void wavelet_compression(Node* matrix, int* countTrue){
 
 	}
 
+
+	/*
 	//Print vort-values in a matrix
 	datatype vort;
 
@@ -216,6 +218,8 @@ void wavelet_compression(Node* matrix, int* countTrue){
 
      	std::cout<<std::endl;
     }
+    
+
 
     //Print isPicked values in a matrix
     int printIsPicked;
@@ -237,6 +241,7 @@ void wavelet_compression(Node* matrix, int* countTrue){
 
      	std::cout<<std::endl;
     }
+    */
 
 	//Count nodes where isPicked-value = true
   	*countTrue = 0;
@@ -253,9 +258,10 @@ void wavelet_compression(Node* matrix, int* countTrue){
 	}
 
 
-	std::cout<<"countTrue: "<<*countTrue<<std::endl;	
-	
+	//std::cout<<"countTrue: "<<*countTrue<<std::endl;	
+	std::cout<<"hej?"<<std::endl;
 	//Free allocated memory on GPU
 	cudaFree(d_matrix);	
+	std::cout<<"hej! :(:"<<std::endl;
 
 }

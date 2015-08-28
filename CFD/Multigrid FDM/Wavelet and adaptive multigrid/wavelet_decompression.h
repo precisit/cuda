@@ -12,7 +12,7 @@ __global__ void wavelet_d_kernal_y(Node* matrix, int LEN_OF_MATRIX, int layer, i
 
 __global__ void wavelet_d_kernal_x(Node* matrix, int LEN_OF_MATRIX, int layer, int step_in);
 
-void wavelet_decompression(Node* __restrict__ array, Node* __restrict__ matrix, Node* new_matrix, int *countTrue);
+void wavelet_decompression(Node* __restrict__ array, Node* __restrict__ matrix, int *countTrue);
 
 
 #endif

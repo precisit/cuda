@@ -888,6 +888,7 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 		}
 
 		free(u);
+		free(savedNodes);
 		u = u_tmp;
 
 		findNeighbours(b);
@@ -897,8 +898,6 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 	}
 
 	Node AdaptiveGrid::interpolateGhostPointFromGlobal(int x_glo, int y_glo){
-		//std::cout<<"GLLLLLLLLLLLLLLLLLLLLLLOBAL!!!!!"<<std::endl;
-		//std::cout<<"Llllllllllllllllllayer: "<<this->layerNr<<std::endl;
 		assert(this->layerNr != 1);
 
 		assert( this->coarserGrid != NULL );

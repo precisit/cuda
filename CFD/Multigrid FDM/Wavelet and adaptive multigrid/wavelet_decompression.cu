@@ -94,18 +94,20 @@ __global__ void wavelet_d_kernal_x(Node* matrix, int LEN_OF_MATRIX, int layer, i
 }
 
 
-void wavelet_decompression(Node* array, Node* matrix, Node* new_matrix, int *countTrue){
+void wavelet_decompression(Node* array, Node* matrix, int *countTrue){
 	
 	const int size = LEN_OF_MATRIX*LEN_OF_MATRIX* sizeof(Node);	
 	
 	Node *d_matrix;	
 
+	/*
 	//Print values of vort in array
 	for(int i = 0; i<*countTrue; i++){
 
 	std::cout<<array[i].vort<<" ";
 
 	}
+	*/
 
 	//Copy node-values from array to matrix
 	for(int i = 0; i<*countTrue; i++){
@@ -165,6 +167,7 @@ void wavelet_decompression(Node* array, Node* matrix, Node* new_matrix, int *cou
 	}
 
 
+	/*
 	//Print vort-values in a matrix
 	datatype vort;
 
@@ -185,6 +188,8 @@ void wavelet_decompression(Node* array, Node* matrix, Node* new_matrix, int *cou
 
      	std::cout<<std::endl;
     }
+
+    */
 
     //Print isPicked values in a matrix
 	int printIsPicked;
@@ -209,9 +214,9 @@ void wavelet_decompression(Node* array, Node* matrix, Node* new_matrix, int *cou
     }
 
 	//Free memory on GPU
-	cudaFree(matrix);
+	cudaFree(d_matrix);
 
 	//Free memory on CPU	
-	delete[] array;
-
+	//delete[] array;
+	free(array);
 }

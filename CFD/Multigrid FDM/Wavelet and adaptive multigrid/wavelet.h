@@ -9,7 +9,7 @@ __device__ bool interpolDot(float p1, float p2, float p3, float p4, float p5, fl
 
 __global__ void wavelet_kernal(Node* matrix, int row, int colum, float tol, int step, int layers);
 
-void wavelet_compression( Node* __restrict__ matrix, Node* __restrict__  ordedNodelist, int*  __restrict__ origoArray, int* __restrict__ countTrue);
+void wavelet_compression( Node* __restrict__ matrix, int* countTrue);
 
 #endif
 

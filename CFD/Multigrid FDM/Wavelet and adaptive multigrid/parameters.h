@@ -5,18 +5,18 @@
 #define datatype float
 #define Re 10.0f
 #define KAPPA 1000000.0f
-#define TOLERANCE 0.2f
+#define TOLERANCE 0.001f
 #define THREADS_PER_BLOCK 10
 #define LAYERS 4
+#define ITERATIONS_UNTIL_GRID_UPDATE 2
+#define END_TIME 0.0001f
+#define DELTA_T 0.000005f
 
 
 
 //LEAVE THESE ALONE!
 #define VORTSTREAM
-const int row = (1<<LAYERS)+1;
-const int colum = (1<<LAYERS)+1;
-const int step = 2;
-const int layers = LAYERS;
-const float tol = TOLERANCE;
+const int LEN_OF_MATRIX = (1<<LAYERS)+1;
+#define STEP 2
 
 #endif
