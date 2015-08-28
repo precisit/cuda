@@ -24,7 +24,7 @@ class Node
 public:
 	//Position
 	datatype x, y;
-	bool isPicked;
+	int isPicked;
 	int layer;
 
 	//Index of Position

@@ -1,42 +1,10 @@
 
 #include "adaptive_grid.h"
 
-/*
-typedef datatype (*func_t)(datatype, datatype);
-typedef datatype (*func_)(int, int);
-
-class AdaptiveGrid{
-public:
-
-	Node* u;
-    int len;
-    Node* b;
-    Node* d;
-    Node* w;
-
-    Node* boundaryVals;
-    int* boundaryIndex;
-    int lenOfBoundary;
-
-    Node** pointsChosenByWavelet; //An array of Node pointers
-    int numOfPointsChosen;
-
-    int layerNr;
-    int numOfLayers;
-    int origo_x;
-    int origo_y;
-
-    AdaptiveGrid* finerGrid;// = NULL;
-    AdaptiveGrid* coarserGrid;// = NULL;
-    datatype h;
-    */
-
 	bool AdaptiveGrid::isInBoundary(const int x, const int y){
-		//std::cout<<"hello there!: "<<lenOfBoundary<<std::endl;
 		for (int i = 0; i < lenOfBoundary; ++i)
 		{
 			if(boundaryIndex[2*i]==x && boundaryIndex[2*i+1]==y){
-				//*val = boundaryVals[i];
 				return true;
 			}
 		}
@@ -54,14 +22,12 @@ public:
 	}
 
 	datatype AdaptiveGrid::getFromBoundary(const int x, const int y){
-		//std::cout<<"hi!"<<std::endl;
 		for (int i = 0; i < lenOfBoundary; ++i)
 		{
 			if(boundaryIndex[2*i] == x && boundaryIndex[2*i+1] == y){
 				return boundaryVals[i].stream;
 			}
 		}
-		//std::cout<<x<<" "<<y<<std::endl;
 		assert(0);
 		return boundaryVals[0].stream;
 	}
@@ -570,6 +536,8 @@ public:
 		free(x_local);
 		free(y_local);
 		
+		std::cout<<"numPoints (coarsest grid): "<<numberOfPoints<<std::endl;
+
 		int counter = numberOfPoints;
 		len = counter;
 
@@ -694,6 +662,9 @@ public:
 		free(y_loc);
 		free(x_glo);
 		free(y_glo);
+
+		std::cout<<"setupCoarsestGrid is done\n";
+
 		//len = counter;
 		//std::cout<<"fill rate: "<<(float)counter/(9.0f*numberOfPoints)<<std::endl;
 	}
@@ -746,9 +717,7 @@ Node* AdaptiveGrid::findGlobNodeGeneral(Node* arr, const int ind_x, const int in
 		}
 		return NULL;
 
-	}	
-
-
+	}
 
 	void AdaptiveGrid::findNeighbours(Node * arr){
 		//Make sure everyone finds thier neigbours.
