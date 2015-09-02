@@ -1,3 +1,8 @@
+/*
+	This is the Runge Kutta 4:th order method. It is used 
+	to numerically integrate in time.
+*/
+
 #ifndef RK4_H
 #define RK4_H
 

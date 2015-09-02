@@ -1,3 +1,9 @@
+/*
+	These are the parameters used in the calculations. Some can be 
+	altered, others cannot!
+*/
+
+
 #ifndef PARAMETERS_PRECISIT_H
 #define PARAMETERS_PRECISIT_H
 

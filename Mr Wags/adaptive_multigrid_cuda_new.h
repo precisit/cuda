@@ -1,3 +1,10 @@
+/*
+ *	A class that contains all the methods used in the 
+ *  adaptive grid calculations. All the calculations 
+ *  are made on the GPU.
+ */
+
+
 #ifndef ADAPTIVE_MULTIGRID_CUDA_NEW_H
 #define ADAPTIVE_MULTIGRID_CUDA_NEW_H
 

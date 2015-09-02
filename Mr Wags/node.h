@@ -1,3 +1,8 @@
+	/*
+		This is the data node at the end of the pointers.
+		Each grid point should contain one of these.
+	*/
+
 #ifndef NODE_H
 #define NODE_H
 
@@ -15,11 +20,6 @@
 
 class Node
 {
-
-	/*
-		This is the data node at the end of the pointers.
-		Each grid point should contain one of these.
-	*/
 
 public:
 	//Position

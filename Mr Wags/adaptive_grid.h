@@ -1,3 +1,9 @@
+/*
+ *	A class that contains all the data structure nessecary 
+ * for the adaptive grids.
+ */
+
+
 #ifndef ADAPTIVE_GRID_H
 #define ADAPTIVE_GRID_H
 
