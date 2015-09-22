@@ -1,6 +1,7 @@
-/*Wavelet decompression is a function decompressing the Wavelet compression
+/*
+ * Wavelet decompression is a function decompressing the Wavelet compression
  * by doing the computations in reverse. All computations are done on the GPU.
-*/
+ */
 #ifndef WAVELET_D_H
 #define WAVELET_D_H
 
