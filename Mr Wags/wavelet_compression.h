@@ -1,4 +1,7 @@
-/* Wavelet compression is a function using the second generation transform in two dimensions. All computations are done on the GPU.*/
+/* 
+ * Wavelet compression is a function using the second generation transform in two dimensions. 
+ * All computations are done on the GPU.
+ */
 #ifndef WAVELET_H
 #define WAVELET_H
 
